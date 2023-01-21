@@ -2,12 +2,14 @@ import zmq
 import numpy as np
 import time
 import zmq.asyncio
+import os.path
 import json
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 from multiprocessing import shared_memory as sm
 import ctypes as cp
+from PIL import Image
 
 from tango.server import (
     run,
@@ -28,12 +30,19 @@ class MoenchZmqProcessor(Device):
     _process_pool = None
     green_mode = GreenMode.Asyncio
 
+    # probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing
+    # and further loaded with dynamic attributes
     shared_memory_pedestal = None
     shared_memory_analog_img = None
     shared_memory_threshold_img = None
     shared_memory_counting_img = None
+
     shared_threshold = None
-    shared_test_counter = None
+    shared_counting_threshold = None
+
+    _save_analog_img = True
+    _save_threshold_img = True
+    _save_counting_img = True
 
     ZMQ_RX_IP = device_property(
         dtype=str,
@@ -53,15 +62,6 @@ class MoenchZmqProcessor(Device):
         default_value=20,
     )
 
-    test_counter = attribute(
-        label="test counter",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=2,
-        max_dim_y=2,
-        access=AttrWriteType.READ_WRITE,
-    )
-
     pedestal = attribute(
         display_level=DispLevel.EXPERT,
         label="pedestal",
@@ -79,7 +79,7 @@ class MoenchZmqProcessor(Device):
         dformat=AttrDataFormat.IMAGE,
         max_dim_x=400,
         max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc="sum of images processed with subtracted pedestals",
     )
     threshold_img = attribute(
@@ -89,7 +89,7 @@ class MoenchZmqProcessor(Device):
         dformat=AttrDataFormat.IMAGE,
         max_dim_x=400,
         max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc='sum of "analog images" (with subtracted pedestal) processed with thresholding algorithm',
     )
     counting_img = attribute(
@@ -99,16 +99,53 @@ class MoenchZmqProcessor(Device):
         dformat=AttrDataFormat.IMAGE,
         max_dim_x=400,
         max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc='sum of "analog images" (with subtracted pedestal) processed with counting algorithm',
     )
 
     threshold = attribute(
-        label="threshold",
+        label="th",
         unit="ADU",
         dtype=float,
         access=AttrWriteType.READ_WRITE,
-        doc="cut-off value for thresholding/counting",
+        hw_memorized=True,
+        doc="cut-off value for thresholding",
+    )
+
+    counting_threshold = attribute(
+        label="counting th",
+        unit="ADU",
+        dtype=float,
+        access=AttrWriteType.READ_WRITE,
+        hw_memorized=True,
+        doc="cut-off value for counting",
+    )
+
+    save_analog_img = attribute(
+        label="save analog",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="save analog .tiff file after acquisition",
+    )
+
+    save_threshold_img = attribute(
+        label="save threshold",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="save threshold .tiff file after acquisition",
+    )
+
+    save_counting_img = attribute(
+        label="save counting",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="save counting .tiff file after acquisition",
     )
 
     def write_pedestal(self, value):
@@ -149,11 +186,29 @@ class MoenchZmqProcessor(Device):
     def read_threshold(self):
         return self.shared_threshold.value
 
-    def write_test_counter(self, value):
-        pass
+    def write_counting_threshold(self, value):
+        self.shared_counting_threshold.value = value
 
-    def read_test_counter(self):
-        return np.ndarray((2, 2), dtype=float, buffer=self.shared_memory.buf)
+    def read_counting_threshold(self):
+        return self.shared_counting_threshold.value
+
+    def read_save_analog_img(self):
+        return self._save_analog_img
+
+    def write_save_analog_img(self, value):
+        self._save_analog_img = value
+
+    def read_save_threshold_img(self):
+        return self._save_threshold_img
+
+    def write_save_threshold_img(self, value):
+        self._save_threshold_img = value
+
+    def read_save_counting_img(self):
+        return self._save_counting_img
+
+    def write_save_counting_img(self, value):
+        self._save_counting_img = value
 
     # when processing is ready -> self.push_change_event(self, "analog_img"/"counting_img"/"threshold_img")
 
@@ -177,6 +232,19 @@ class MoenchZmqProcessor(Device):
         array = np.frombuffer(msg2, dtype=np.uint16).reshape((400, 400))
         return header, array
 
+    @command
+    def start_receiver(self):
+        pass
+
+    @command
+    def stop_receiver(self):
+        pass
+        self.save_files()
+
+    @command
+    def acquire_pedestals(self):
+        pass
+
     def init_device(self):
         Device.init_device(self)
         # sync manager for synchronization between threads
@@ -195,6 +263,7 @@ class MoenchZmqProcessor(Device):
 
         # using Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
+        self.shared_counting_threshold = self._manager.Value("f", 0)
         """
         Here is a small explanation why the threshold is handled in other way as images buffers:
         Despite the fact there is a thread safe "multiprocessing.Value" class for scalars (see above), there is no class for 2D array.
@@ -231,6 +300,27 @@ class MoenchZmqProcessor(Device):
         self.set_change_event("threshold_img", True, False)
         self.set_change_event("counting_img", True, False)
 
+    def update_images_events(self):
+        self.push_change_event("analog_img")
+        self.push_change_event("threshold_img")
+        self.push_change_event("counting_img")
+
+    def save_files(self, path, filename, index):
+        savepath = os.path.join(path, filename)
+        if self.read_save_analog_img():
+            im = Image.fromarray(self.read_analog_img())
+            im.save(f"{savepath}_{index}_analog.tiff")
+
+        if self.read_save_threshold_img():
+            im = Image.fromarray(self.read_threshold_img())
+            im.save(f"{savepath}_{index}_threshold_{self.read_threshold()}.tiff")
+
+        if self.read_save_counting_img():
+            im = Image.fromarray(self.read_analog_img())
+            im.save(
+                f"{savepath}_{index}_counting_{self.read_counting_threshold()}.tiff"
+            )
+
     def _init_zmq_socket(self, zmq_ip: str, zmq_port: str):
         endpoint = f"tcp://{zmq_ip}:{zmq_port}"
         self._context = zmq.asyncio.Context()
@@ -243,6 +333,15 @@ class MoenchZmqProcessor(Device):
         self._process_pool.shutdown()
         self._manager.shutdown()
         self._shared_memory_manager.shutdown()
+
+
+# concept for the future decorator to isolate concurrency and tango features from evaluation logic hidden in frame_func
+def wrap_function(header, payload, lock, shared_memory, frame_func, *args, **kwargs):
+    frame_processed = frame_func(payload)
+    lock.acquire()
+    img_buffer = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
+    img_buffer += frame_processed
+    lock.release()
 
 
 def processing_func(frame_index, array, shared_memory, lock):
