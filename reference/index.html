@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Code reference - pytango-moenchZmqServer</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Code reference";
+        var mkdocs_page_input_path = "reference.md";
+        var mkdocs_page_url = null;
+      </script>
+    
+    <script src="../js/jquery-3.6.0.min.js" defer></script>
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.5.0/highlight.min.js"></script>
+      <script>hljs.initHighlightingOnLoad();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> pytango-moenchZmqServer
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../detector/">Detector reference</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Code reference</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#MoenchZmqServer">MoenchZmqServer</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#MoenchZmqServer.MoenchZmqServer">MoenchZmqServer</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#MoenchZmqServer.MoenchZmqServer.save_files">save_files()</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">pytango-moenchZmqServer</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" alt="Docs"></a> &raquo;</li>
+      <li>Code reference</li>
+    <li class="wy-breadcrumbs-aside">
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="reference">Reference</h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+<a id="MoenchZmqServer"></a>
+  <div class="doc doc-contents first">
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="MoenchZmqServer.MoenchZmqServer" class="doc doc-heading">
+        <code>MoenchZmqServer</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+      <p class="doc doc-class-bases">
+        Bases: <code><span title="tango.server.Device">Device</span></code></p>
+
+  
+      <p>Custom implementation of zmq processing server for X-ray detector MÖNCH made in PSI which is integrated with a Tango device server.</p>
+
+
+        <details class="quote">
+          <summary>Source code in <code>pytango-moenchZmqServer\MoenchZmqServer.py</code></summary>
+          <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MoenchZmqServer</span><span class="p">(</span><span class="n">Device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom implementation of zmq processing server for X-ray detector MÖNCH made in PSI which is integrated with a Tango device server.&quot;&quot;&quot;</span>
+
+    <span class="n">_manager</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_context</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_socket</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_process_pool</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">green_mode</span> <span class="o">=</span> <span class="n">GreenMode</span><span class="o">.</span><span class="n">Asyncio</span>
+
+    <span class="c1"># probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing</span>
+    <span class="c1"># and further loaded with dynamic attributes</span>
+    <span class="n">shared_memory_pedestal</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_memory_analog_img</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_memory_threshold_img</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_memory_counting_img</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">shared_threshold</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_counting_threshold</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_processed_frames</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_amount_frames</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">shared_server_running</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">_save_analog_img</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">_save_threshold_img</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">_save_counting_img</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="n">ZMQ_RX_IP</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;port of the slsReceiver instance, must match the config&quot;</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;192.168.2.200&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">ZMQ_RX_PORT</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;ip of slsReceiver instance, must match the config&quot;</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;50003&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">PROCESSING_CORES</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;cores amount to process, up to 72 on MOENCH workstation&quot;</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">FLIP_IMAGE</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;should the final image be flipped/inverted along y-axis&quot;</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">pedestal</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">display_level</span><span class="o">=</span><span class="n">DispLevel</span><span class="o">.</span><span class="n">EXPERT</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;pedestal&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">dformat</span><span class="o">=</span><span class="n">AttrDataFormat</span><span class="o">.</span><span class="n">IMAGE</span><span class="p">,</span>
+        <span class="n">max_dim_x</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">max_dim_y</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;pedestal (averaged dark images), i.e. offset which will be subtracted from each acquired picture&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">analog_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">display_level</span><span class="o">=</span><span class="n">DispLevel</span><span class="o">.</span><span class="n">EXPERT</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;analog img&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">dformat</span><span class="o">=</span><span class="n">AttrDataFormat</span><span class="o">.</span><span class="n">IMAGE</span><span class="p">,</span>
+        <span class="n">max_dim_x</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">max_dim_y</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;sum of images processed with subtracted pedestals&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">threshold_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">display_level</span><span class="o">=</span><span class="n">DispLevel</span><span class="o">.</span><span class="n">EXPERT</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;threshold img&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">dformat</span><span class="o">=</span><span class="n">AttrDataFormat</span><span class="o">.</span><span class="n">IMAGE</span><span class="p">,</span>
+        <span class="n">max_dim_x</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">max_dim_y</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;sum of &quot;analog images&quot; (with subtracted pedestal) processed with thresholding algorithm&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">counting_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">display_level</span><span class="o">=</span><span class="n">DispLevel</span><span class="o">.</span><span class="n">EXPERT</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;counting img&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">dformat</span><span class="o">=</span><span class="n">AttrDataFormat</span><span class="o">.</span><span class="n">IMAGE</span><span class="p">,</span>
+        <span class="n">max_dim_x</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">max_dim_y</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s1">&#39;sum of &quot;analog images&quot; (with subtracted pedestal) processed with counting algorithm&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">threshold</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;th&quot;</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ADU&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">hw_memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;cut-off value for thresholding&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">counting_threshold</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;counting th&quot;</span><span class="p">,</span>
+        <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;ADU&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">hw_memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;cut-off value for counting&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">processed_frames</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;proc frames&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;amount of already processed frames&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">amount_frames</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;amount frames&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;expected frames to receive from detector&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">server_running</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">display_level</span><span class="o">=</span><span class="n">DispLevel</span><span class="o">.</span><span class="n">EXPERT</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;is server running?&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;if true - server is running, otherwise - not&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">save_analog_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;save analog&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">hw_memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;save analog .tiff file after acquisition&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">save_threshold_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;save threshold&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">hw_memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;save threshold .tiff file after acquisition&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">save_counting_img</span> <span class="o">=</span> <span class="n">attribute</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;save counting&quot;</span><span class="p">,</span>
+        <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">access</span><span class="o">=</span><span class="n">AttrWriteType</span><span class="o">.</span><span class="n">READ_WRITE</span><span class="p">,</span>
+        <span class="n">memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">hw_memorized</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">doc</span><span class="o">=</span><span class="s2">&quot;save counting .tiff file after acquisition&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_pedestal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_pedestal</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_pedestal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_shared_array</span><span class="p">(</span>
+            <span class="n">shared_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_pedestal</span><span class="p">,</span> <span class="n">flip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FLIP_IMAGE</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_analog_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_analog_img</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_analog_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_shared_array</span><span class="p">(</span>
+            <span class="n">shared_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_analog_img</span><span class="p">,</span> <span class="n">flip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FLIP_IMAGE</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_threshold_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_threshold_img</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_threshold_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_shared_array</span><span class="p">(</span>
+            <span class="n">shared_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_threshold_img</span><span class="p">,</span> <span class="n">flip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FLIP_IMAGE</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_counting_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_counting_img</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_counting_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_read_shared_array</span><span class="p">(</span>
+            <span class="n">shared_memory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_counting_img</span><span class="p">,</span> <span class="n">flip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">FLIP_IMAGE</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_threshold</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_threshold</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">write_counting_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_counting_threshold</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_counting_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_counting_threshold</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">write_processed_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_processed_frames</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_processed_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_processed_frames</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">write_amount_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_amount_frames</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_amount_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_amount_frames</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">write_server_running</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_server_running</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read_server_running</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_server_running</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_save_analog_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_analog_img</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_save_analog_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_analog_img</span>
+
+    <span class="k">def</span> <span class="nf">write_save_threshold_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_threshold_img</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_save_threshold_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_threshold_img</span>
+
+    <span class="k">def</span> <span class="nf">write_save_counting_img</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_counting_img</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">read_save_counting_img</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_save_counting_img</span>
+
+    <span class="c1"># when processing is ready -&gt; self.push_change_event(self, &quot;analog_img&quot;/&quot;counting_img&quot;/&quot;threshold_img&quot;)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">frame_index</span><span class="p">,</span> <span class="n">array</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_msg_pair</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">frame_index</span><span class="p">,</span> <span class="n">array</span><span class="p">)</span>
+            <span class="n">future</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_process_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                <span class="n">processing_func</span><span class="p">,</span>
+                <span class="n">frame_index</span><span class="p">,</span>
+                <span class="n">array</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_analog_img</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">future</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">wrap_future</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">get_msg_pair</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">isJSON</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+        <span class="n">msg1</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">msg1</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">isJSON</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">isJSON</span><span class="p">:</span>
+            <span class="n">msg2</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+            <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">msg2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">header</span><span class="p">,</span> <span class="n">array</span>
+
+    <span class="k">def</span> <span class="nf">_read_shared_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared_memory</span><span class="p">,</span> <span class="n">flip</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">buffer</span><span class="o">=</span><span class="n">shared_memory</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">flip</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">array</span>
+
+    <span class="nd">@command</span>
+    <span class="k">def</span> <span class="nf">start_receiver</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_server_running</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@command</span>
+    <span class="k">def</span> <span class="nf">stop_receiver</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_server_running</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1"># self.save_files()</span>
+
+    <span class="nd">@command</span>
+    <span class="k">def</span> <span class="nf">acquire_pedestals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">init_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Device</span><span class="o">.</span><span class="n">init_device</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_device_properties</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_device_class</span><span class="p">())</span>
+        <span class="c1"># sync manager for synchronization between threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Manager</span><span class="p">()</span>
+        <span class="c1"># using simple mutex (lock) to synchronize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+        <span class="c1"># manager for allocation of shared memory between threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span> <span class="o">=</span> <span class="n">SharedMemoryManager</span><span class="p">()</span>
+        <span class="c1"># starting the shared memory manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="c1"># default values of properties do not work without database though ¯\_(ツ)_/¯</span>
+        <span class="n">processing_cores_amount</span> <span class="o">=</span> <span class="mi">16</span>  <span class="c1"># self.PROCESSING_CORES</span>
+        <span class="n">zmq_ip</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZMQ_RX_IP</span>
+        <span class="n">zmq_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ZMQ_RX_PORT</span>
+
+        <span class="c1"># using shared threadsafe Value instance from multiprocessing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_counting_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_server_running</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_processed_frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_amount_frames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Here is a small explanation why the threshold is handled in other way as images buffers:</span>
+<span class="sd">        Despite the fact there is a thread safe &quot;multiprocessing.Value&quot; class for scalars (see above), there is no class for 2D array.</span>
+<span class="sd">        Yes, there are 1D arrays available (see &quot;multiprocessing.Array&quot;), but they need to be handled as python arrays and not as numpy arrays.</span>
+<span class="sd">        Continuos rearrangement of them into numpy arrays and vise versa considered as bad.</span>
+<span class="sd">        In python 3.8 shared memory feature was introduced which allows to work directly with memory and use a numpy array as proxy to it.</span>
+<span class="sd">        Documentation: https://docs.python.org/3.8/library/multiprocessing.shared_memory.html</span>
+<span class="sd">        A good example: https://luis-sena.medium.com/sharing-big-numpy-arrays-across-python-processes-abf0dc2a0ab2</span>
+
+<span class="sd">        tl;dr: we are able to share any numpy array between processes but in little other way</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># calculating how many bytes need to be allocated and shared for a 400x400 float numpy array</span>
+        <span class="n">img_bytes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+        <span class="c1"># allocating 4 arrays of this type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_pedestal</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">SharedMemory</span><span class="p">(</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">img_bytes</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_analog_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">SharedMemory</span><span class="p">(</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">img_bytes</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_threshold_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">SharedMemory</span><span class="p">(</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">img_bytes</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_memory_counting_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">SharedMemory</span><span class="p">(</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">img_bytes</span>
+        <span class="p">)</span>
+        <span class="c1"># creating thread pool executor to which the frame processing will be assigned</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_process_pool</span> <span class="o">=</span> <span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="n">processing_cores_amount</span><span class="p">)</span>
+
+        <span class="c1"># creating and initialing socket to read from</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_zmq_socket</span><span class="p">(</span><span class="n">zmq_ip</span><span class="p">,</span> <span class="n">zmq_port</span><span class="p">)</span>
+        <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+        <span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">main</span><span class="p">())</span>
+
+        <span class="c1"># initialization of tango events for pictures buffers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_change_event</span><span class="p">(</span><span class="s2">&quot;analog_img&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_change_event</span><span class="p">(</span><span class="s2">&quot;threshold_img&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_change_event</span><span class="p">(</span><span class="s2">&quot;counting_img&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># updating of tango events for pictures buffers</span>
+    <span class="k">def</span> <span class="nf">update_images_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_change_event</span><span class="p">(</span><span class="s2">&quot;analog_img&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_change_event</span><span class="p">(</span><span class="s2">&quot;threshold_img&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">push_change_event</span><span class="p">(</span><span class="s2">&quot;counting_img&quot;</span><span class="p">)</span>
+
+    <span class="c1"># save files on disk for pictures buffers</span>
+    <span class="k">def</span> <span class="nf">save_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Function for saving the buffered images in .tiff format.</span>
+<span class="sd">        The files will have different postfixes depending on processing mode.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): folder to save</span>
+<span class="sd">            filename (str): name to save</span>
+<span class="sd">            index (str): capture index</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">savepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_analog_img</span><span class="p">():</span>
+            <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_analog_img</span><span class="p">())</span>
+            <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_analog.tiff&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_threshold_img</span><span class="p">():</span>
+            <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_threshold_img</span><span class="p">())</span>
+            <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_threshold_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">read_threshold</span><span class="p">()</span><span class="si">}</span><span class="s2">.tiff&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_counting_img</span><span class="p">():</span>
+            <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_analog_img</span><span class="p">())</span>
+            <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_counting_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">read_counting_threshold</span><span class="p">()</span><span class="si">}</span><span class="s2">.tiff&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_init_zmq_socket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">zmq_ip</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">zmq_port</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">endpoint</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;tcp://</span><span class="si">{</span><span class="n">zmq_ip</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">zmq_port</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUB</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Connecting to: </span><span class="si">{</span><span class="n">endpoint</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">endpoint</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUBSCRIBE</span><span class="p">,</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete_device</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_process_pool</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_shared_memory_manager</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+        </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h3 id="MoenchZmqServer.MoenchZmqServer.save_files" class="doc doc-heading">
+<code class="highlight language-python"><span class="n">save_files</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span></code>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Function for saving the buffered images in .tiff format.
+The files will have different postfixes depending on processing mode.</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>path</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>folder to save</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>filename</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>name to save</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>index</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>capture index</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+      <details class="quote">
+        <summary>Source code in <code>pytango-moenchZmqServer\MoenchZmqServer.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">save_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function for saving the buffered images in .tiff format.</span>
+<span class="sd">    The files will have different postfixes depending on processing mode.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path (str): folder to save</span>
+<span class="sd">        filename (str): name to save</span>
+<span class="sd">        index (str): capture index</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">savepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_analog_img</span><span class="p">():</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_analog_img</span><span class="p">())</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_analog.tiff&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_threshold_img</span><span class="p">():</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_threshold_img</span><span class="p">())</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_threshold_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">read_threshold</span><span class="p">()</span><span class="si">}</span><span class="s2">.tiff&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_save_counting_img</span><span class="p">():</span>
+        <span class="n">im</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">fromarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">read_analog_img</span><span class="p">())</span>
+        <span class="n">im</span><span class="o">.</span><span class="n">save</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">savepath</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">_counting_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">read_counting_threshold</span><span class="p">()</span><span class="si">}</span><span class="s2">.tiff&quot;</span>
+        <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+      </details>
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../detector/" class="btn btn-neutral float-left" title="Detector reference"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+    
+      <span><a href="../detector/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme_extra.js" defer></script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
+
+</body>
+</html>
