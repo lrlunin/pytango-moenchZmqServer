@@ -10,13 +10,13 @@ socket.bind("tcp://127.0.0.1:5556")
 
 c = 1
 while True:
-    a = np.ones([400*400], dtype=np.uint16)
+    a = np.ones([400 * 400], dtype=np.uint16)
     bytes = a.tobytes()
-    c+=1
+    c += 1
     i = input(f"Enter amount of packets to send with 100Hz\n")
     for x in range(int(i)):
-        dict = {"frame" : x}
+        dict = {"frame": x}
         socket.send_json(dict)
         socket.send(bytes)
-        print(f'Sent packet nr {x+1}')
+        print(f"Sent packet nr {x+1}")
         time.sleep(0.01)

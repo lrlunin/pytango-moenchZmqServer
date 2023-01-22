@@ -64,7 +64,11 @@ class MoenchZmqProcessor(Device):
         doc="cores amount to process, up to 72 on MOENCH workstation",
         default_value=20,
     )
-
+    FLIP_IMAGE = device_property(
+        dtype=bool,
+        doc="should the final image be flipped/inverted along y-axis",
+        default_value=True,
+    )
     pedestal = attribute(
         display_level=DispLevel.EXPERT,
         label="pedestal",
@@ -174,32 +178,32 @@ class MoenchZmqProcessor(Device):
         self.shared_pedestal.value = value
 
     def read_pedestal(self):
-        return np.ndarray(
-            (400, 400), dtype=float, buffer=self.shared_memory_pedestal.buf
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_pedestal, flip=self.FLIP_IMAGE
         )
 
     def write_analog_img(self, value):
         self.shared_analog_img.value = value
 
     def read_analog_img(self):
-        return np.ndarray(
-            (400, 400), dtype=float, buffer=self.shared_memory_analog_img.buf
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_analog_img, flip=self.FLIP_IMAGE
         )
 
     def write_threshold_img(self, value):
         self.shared_threshold_img.value = value
 
     def read_threshold_img(self):
-        return np.ndarray(
-            (400, 400), dtype=float, buffer=self.shared_memory_threshold_img.buf
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_threshold_img, flip=self.FLIP_IMAGE
         )
 
     def write_counting_img(self, value):
         self.shared_counting_img.value = value
 
     def read_counting_img(self):
-        return np.ndarray(
-            (400, 400), dtype=float, buffer=self.shared_memory_counting_img.buf
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_counting_img, flip=self.FLIP_IMAGE
         )
 
     def write_threshold(self, value):
@@ -278,6 +282,13 @@ class MoenchZmqProcessor(Device):
             array = np.frombuffer(msg2, dtype=np.uint16).reshape((400, 400))
         return header, array
 
+    def _read_shared_array(self, shared_memory, flip: bool):
+        array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
+        if flip:
+            return np.flipud(array)
+        else:
+            return array
+
     @command
     def start_receiver(self):
         self.write_server_running(True)
@@ -305,8 +316,8 @@ class MoenchZmqProcessor(Device):
         self._shared_memory_manager.start()
         # default values of properties do not work without database though ¯\_(ツ)_/¯
         processing_cores_amount = 16  # self.PROCESSING_CORES
-        zmq_ip = "127.0.0.1"  # self.ZMQ_RX_IP
-        zmq_port = "5556"  # self.ZMQ_RX_PORT
+        zmq_ip = self.ZMQ_RX_IP
+        zmq_port = self.ZMQ_RX_PORT
 
         # using shared threadsafe Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
