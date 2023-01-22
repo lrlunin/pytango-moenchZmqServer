@@ -305,6 +305,7 @@ class MoenchZmqServer(Device):
 
     def init_device(self):
         Device.init_device(self)
+        self.get_device_properties(self.get_device_class())
         # sync manager for synchronization between threads
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
