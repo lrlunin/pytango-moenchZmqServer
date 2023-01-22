@@ -9,10 +9,20 @@ def analog(img, dark, *args, **kwargs):
 
 
 def thresholding(img, dark, *args, **kwargs):
-    if kwargs["th"] is None:
-        pass
+    th = 999
+    if kwargs.get("th") is not None:
+        th = kwargs.get("th")
     buf = img - dark
     buf = buf > kwargs["th"]
+    return buf
+
+
+def smart_thresholding(img, dark, *args, **kwargs):
+    th = 999
+    if kwargs.get("th") is not None:
+        th = kwargs.get("th")
+    buf = img - dark
+    buf = buf // th
     return buf
 
 

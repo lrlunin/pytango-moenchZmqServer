@@ -39,6 +39,9 @@ class MoenchZmqProcessor(Device):
 
     shared_threshold = None
     shared_counting_threshold = None
+    shared_processed_frames = None
+    shared_amount_frames = None
+    shared_server_running = False
 
     _save_analog_img = True
     _save_threshold_img = True
@@ -120,6 +123,25 @@ class MoenchZmqProcessor(Device):
         hw_memorized=True,
         doc="cut-off value for counting",
     )
+    processed_frames = attribute(
+        label="proc frames",
+        dtype=np.uint16,
+        access=AttrWriteType.READ_WRITE,
+        doc="amount of already processed frames",
+    )
+    amount_frames = attribute(
+        label="amount frames",
+        dtype=np.uint16,
+        access=AttrWriteType.READ_WRITE,
+        doc="expected frames to receive from detector",
+    )
+    server_running = attribute(
+        display_level=DispLevel.EXPERT,
+        label="is server running?",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        doc="if true - server is running, otherwise - not",
+    )
 
     save_analog_img = attribute(
         label="save analog",
@@ -192,28 +214,45 @@ class MoenchZmqProcessor(Device):
     def read_counting_threshold(self):
         return self.shared_counting_threshold.value
 
-    def read_save_analog_img(self):
-        return self._save_analog_img
+    def write_processed_frames(self, value):
+        self.shared_processed_frames.value = value
+
+    def read_processed_frames(self):
+        return self.shared_processed_frames.value
+
+    def write_amount_frames(self, value):
+        self.shared_amount_frames.value = value
+
+    def read_amount_frames(self):
+        return self.shared_amount_frames.value
+
+    def write_server_running(self, value):
+        self.shared_server_running.value = int(value)
+
+    def read_server_running(self):
+        return bool(self.shared_server_running.value)
 
     def write_save_analog_img(self, value):
         self._save_analog_img = value
 
-    def read_save_threshold_img(self):
-        return self._save_threshold_img
+    def read_save_analog_img(self):
+        return self._save_analog_img
 
     def write_save_threshold_img(self, value):
         self._save_threshold_img = value
 
-    def read_save_counting_img(self):
-        return self._save_counting_img
+    def read_save_threshold_img(self):
+        return self._save_threshold_img
 
     def write_save_counting_img(self, value):
         self._save_counting_img = value
 
+    def read_save_counting_img(self):
+        return self._save_counting_img
+
     # when processing is ready -> self.push_change_event(self, "analog_img"/"counting_img"/"threshold_img")
 
-    async def main(self, process_amount: int):
-        self._process_pool = ProcessPoolExecutor(process_amount)
+    async def main(self):
         while True:
             frame_index, array = await self.get_msg_pair()
             print(frame_index, array)
@@ -227,19 +266,27 @@ class MoenchZmqProcessor(Device):
             future = asyncio.wrap_future(future)
 
     async def get_msg_pair(self):
-        msg1, msg2 = await self._socket.recv(), await self._socket.recv()
-        header = json.loads(msg1)
-        array = np.frombuffer(msg2, dtype=np.uint16).reshape((400, 400))
+        isJSON = True
+        array = np.zeros([400, 400], dtype=np.uint16)
+        msg1 = await self._socket.recv()
+        try:
+            header = json.loads(msg1)
+        except:
+            isJSON = False
+        if isJSON:
+            msg2 = await self._socket.recv()
+            array = np.frombuffer(msg2, dtype=np.uint16).reshape((400, 400))
         return header, array
 
     @command
     def start_receiver(self):
+        self.write_server_running(True)
         pass
 
     @command
     def stop_receiver(self):
-        pass
-        self.save_files()
+        self.write_server_running(False)
+        # self.save_files()
 
     @command
     def acquire_pedestals(self):
@@ -256,14 +303,17 @@ class MoenchZmqProcessor(Device):
         self._shared_memory_manager = SharedMemoryManager()
         # starting the shared memory manager
         self._shared_memory_manager.start()
-
+        # default values of properties do not work without database though ¯\_(ツ)_/¯
         processing_cores_amount = 16  # self.PROCESSING_CORES
         zmq_ip = "127.0.0.1"  # self.ZMQ_RX_IP
         zmq_port = "5556"  # self.ZMQ_RX_PORT
 
-        # using Value instance from multiprocessing
+        # using shared threadsafe Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
         self.shared_counting_threshold = self._manager.Value("f", 0)
+        self.shared_server_running = self._manager.Value("b", 0)
+        self.shared_processed_frames = self._manager.Value("I", 0)
+        self.shared_amount_frames = self._manager.Value("I", 0)
         """
         Here is a small explanation why the threshold is handled in other way as images buffers:
         Despite the fact there is a thread safe "multiprocessing.Value" class for scalars (see above), there is no class for 2D array.
@@ -291,20 +341,26 @@ class MoenchZmqProcessor(Device):
         self.shared_memory_counting_img = self._shared_memory_manager.SharedMemory(
             size=img_bytes
         )
-        # creating and initialing socket
+        # creating thread pool executor to which the frame processing will be assigned
+        self._process_pool = ProcessPoolExecutor(processing_cores_amount)
+
+        # creating and initialing socket to read from
         self._init_zmq_socket(zmq_ip, zmq_port)
         loop = asyncio.get_event_loop()
-        loop.create_task(self.main(processing_cores_amount))
+        loop.create_task(self.main())
 
+        # initialization of tango events for pictures buffers
         self.set_change_event("analog_img", True, False)
         self.set_change_event("threshold_img", True, False)
         self.set_change_event("counting_img", True, False)
 
+    # updating of tango events for pictures buffers
     def update_images_events(self):
         self.push_change_event("analog_img")
         self.push_change_event("threshold_img")
         self.push_change_event("counting_img")
 
+    # save files on disk for pictures buffers
     def save_files(self, path, filename, index):
         savepath = os.path.join(path, filename)
         if self.read_save_analog_img():
@@ -344,6 +400,7 @@ def wrap_function(header, payload, lock, shared_memory, frame_func, *args, **kwa
     lock.release()
 
 
+# dummy processing function which increments the buffer
 def processing_func(frame_index, array, shared_memory, lock):
     print(f"Enter processing frame {frame_index}")
     time.sleep(0.25)
