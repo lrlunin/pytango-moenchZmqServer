@@ -24,6 +24,8 @@ from multiprocessing.managers import SharedMemoryManager
 
 
 class MoenchZmqServer(Device):
+    """Custom implementation of zmq processing server for X-ray detector MÖNCH made in PSI which is integrated with a Tango device server."""
+
     _manager = None
     _context = None
     _socket = None
@@ -374,6 +376,14 @@ class MoenchZmqServer(Device):
 
     # save files on disk for pictures buffers
     def save_files(self, path, filename, index):
+        """Function for saving the buffered images in .tiff format.
+        The files will have different postfixes depending on processing mode.
+
+        Args:
+            path (str): folder to save
+            filename (str): name to save
+            index (str): capture index
+        """
         savepath = os.path.join(path, filename)
         if self.read_save_analog_img():
             im = Image.fromarray(self.read_analog_img())

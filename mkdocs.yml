@@ -1,0 +1,15 @@
+site_name: pytango-moenchZmqServer
+theme:
+    name: readthedocs
+
+watch:
+- .
+plugins:
+- search
+- mkdocstrings
+
+nav:
+    - Home: index.md
+    - Installation: installation.md
+    - Detector reference: detector.md
+    - Code reference: reference.md
