@@ -23,7 +23,7 @@ from tango import GreenMode, AttrWriteType, DispLevel, AttrDataFormat
 from multiprocessing.managers import SharedMemoryManager
 
 
-class MoenchZmqProcessor(Device):
+class MoenchZmqServer(Device):
     _manager = None
     _context = None
     _socket = None
@@ -129,13 +129,13 @@ class MoenchZmqProcessor(Device):
     )
     processed_frames = attribute(
         label="proc frames",
-        dtype=np.uint16,
+        dtype=int,
         access=AttrWriteType.READ_WRITE,
         doc="amount of already processed frames",
     )
     amount_frames = attribute(
         label="amount frames",
-        dtype=np.uint16,
+        dtype=int,
         access=AttrWriteType.READ_WRITE,
         doc="expected frames to receive from detector",
     )
@@ -424,4 +424,4 @@ def processing_func(frame_index, array, shared_memory, lock):
 
 
 if __name__ == "__main__":
-    run((MoenchZmqProcessor,))
+    run((MoenchZmqServer,))
