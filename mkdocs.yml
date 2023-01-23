@@ -1,15 +1,37 @@
 site_name: pytango-moenchZmqServer
 theme:
-    name: readthedocs
+    name: material
 
 watch:
-- .
+    - .
 plugins:
-- search
-- mkdocstrings
+    - search
+    - mkdocstrings
+    - mermaid2
+    - glightbox
 
 nav:
     - Home: index.md
     - Installation: installation.md
+    - Coding guideline: guideline.md
     - Detector reference: detector.md
     - Code reference: reference.md
+
+markdown_extensions:
+    # Python Markdown
+    - abbr
+    - attr_list
+    - toc:
+          permalink: true
+          toc_depth: "2-6"
+
+    # Python Markdown Extensions
+    - pymdownx.highlight
+    - admonition
+    - pymdownx.details
+    - pymdownx.progressbar
+    - pymdownx.superfences:
+          custom_fences:
+              - name: mermaid
+                class: mermaid
+                format: !!python/name:mermaid2.fence_mermaid

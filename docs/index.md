@@ -1,13 +1,24 @@
-# Welcome to MkDocs
+---
+title: Very long title
+---
+# **Welcome to MOENCH ZMQ TangoDS documentation!**
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+![Screenshot](img/lenna.png)
 
 ## Commands
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+```mermaid
+graph TD
+A[Client] --> B[Load Balancer]
+B --> C[Server01]
+B --> D[Server02]
+```
+
+```python
+def function(self, a : str):
+    print(self.test(a))
+
+```
 
 ## Project layout
 
