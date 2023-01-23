@@ -1,26 +1,29 @@
-import zmq
-import numpy as np
-import time
-import zmq.asyncio
-import os.path
-import json
-import asyncio
-from concurrent.futures import ProcessPoolExecutor
-import multiprocessing as mp
-from multiprocessing import shared_memory as sm
-import ctypes as cp
-from PIL import Image
+#!/home/moench/miniconda3/envs/pytango310/bin/python
 
-from tango.server import (
-    run,
-    attribute,
-    command,
-    Device,
-    device_property,
-    class_property,
-)
-from tango import GreenMode, AttrWriteType, DispLevel, AttrDataFormat
+import asyncio
+import ctypes as cp
+import json
+import multiprocessing as mp
+import os.path
+import time
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
+
+import numpy as np
+import tango
+import zmq
+import zmq.asyncio
+from PIL import Image
+from tango import AttrDataFormat, AttrWriteType, DevState, DispLevel, GreenMode
+from tango.server import (
+    Device,
+    attribute,
+    class_property,
+    command,
+    device_property,
+    run,
+)
 
 
 class MoenchZmqServer(Device):
@@ -116,7 +119,9 @@ class MoenchZmqServer(Device):
         label="th",
         unit="ADU",
         dtype=float,
+        min_value=0.0,
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
         hw_memorized=True,
         doc="cut-off value for thresholding",
     )
@@ -125,7 +130,9 @@ class MoenchZmqServer(Device):
         label="counting th",
         unit="ADU",
         dtype=float,
+        min_value=0.0,
         access=AttrWriteType.READ_WRITE,
+        memorized=True,
         hw_memorized=True,
         doc="cut-off value for counting",
     )
@@ -145,7 +152,7 @@ class MoenchZmqServer(Device):
         display_level=DispLevel.EXPERT,
         label="is server running?",
         dtype=bool,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc="if true - server is running, otherwise - not",
     )
 
@@ -260,29 +267,36 @@ class MoenchZmqServer(Device):
 
     async def main(self):
         while True:
-            frame_index, array = await self.get_msg_pair()
-            print(frame_index, array)
-            future = self._process_pool.submit(
-                processing_func,
-                frame_index,
-                array,
-                self.shared_memory_analog_img,
-                self._lock,
-            )
-            future = asyncio.wrap_future(future)
+            header, payload = await self.get_msg_pair()
+            if payload is not None:
+                future = self._process_pool.submit(
+                    processing_func,
+                    header,
+                    payload,
+                    self.shared_memory_analog_img,
+                    self._lock,
+                )
+                future = asyncio.wrap_future(future)
 
     async def get_msg_pair(self):
-        isJSON = True
-        array = np.zeros([400, 400], dtype=np.uint16)
-        msg1 = await self._socket.recv()
+        isNextPacketData = True
+        header = None
+        payload = None
+        packet1 = await self._socket.recv()
         try:
-            header = json.loads(msg1)
+            print("parsing header...")
+            header = json.loads(packet1)
+            print(header)
+            isNextPacketData = header.get("data") == 1
+            print(f"isNextPacketdata {isNextPacketData}")
         except:
-            isJSON = False
-        if isJSON:
-            msg2 = await self._socket.recv()
-            array = np.frombuffer(msg2, dtype=np.uint16).reshape((400, 400))
-        return header, array
+            print("is not header")
+            isNextPacketData = False
+        if isNextPacketData:
+            print("parsing data...")
+            packet2 = await self._socket.recv()
+            payload = np.frombuffer(packet2, dtype=np.uint16).reshape((400, 400))
+        return header, payload
 
     def _read_shared_array(self, shared_memory, flip: bool):
         array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
@@ -307,6 +321,7 @@ class MoenchZmqServer(Device):
 
     def init_device(self):
         Device.init_device(self)
+        self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
         # sync manager for synchronization between threads
         self._manager = mp.Manager()
@@ -367,12 +382,14 @@ class MoenchZmqServer(Device):
         self.set_change_event("analog_img", True, False)
         self.set_change_event("threshold_img", True, False)
         self.set_change_event("counting_img", True, False)
+        self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
+    @command
     def update_images_events(self):
-        self.push_change_event("analog_img")
-        self.push_change_event("threshold_img")
-        self.push_change_event("counting_img")
+        self.push_change_event("analog_img", self.read_analog_img(), 400, 400),
+        self.push_change_event("threshold_img", self.read_threshold_img(), 400, 400)
+        self.push_change_event("counting_img", self.read_counting_img(), 400, 400)
 
     # save files on disk for pictures buffers
     def save_files(self, path, filename, index):
@@ -423,14 +440,16 @@ def wrap_function(header, payload, lock, shared_memory, frame_func, *args, **kwa
 
 
 # dummy processing function which increments the buffer
-def processing_func(frame_index, array, shared_memory, lock):
+def processing_func(header, payload, shared_memory, lock):
+    frame_index = header.get("frameIndex")
     print(f"Enter processing frame {frame_index}")
-    time.sleep(0.25)
+
     lock.acquire()
     buf_array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
     print(f"begin shared value = {buf_array}")
-    buf_array += 1
+    buf_array += payload
     lock.release()
+
     print(f"Left processing frame {frame_index}")
 
 
