@@ -9,8 +9,10 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
+import processing_functions
 
 import numpy as np
+from enum import IntEnum
 import tango
 import zmq
 import zmq.asyncio
@@ -19,15 +21,24 @@ from tango import AttrDataFormat, AttrWriteType, DevState, DispLevel, GreenMode
 from tango.server import (
     Device,
     attribute,
-    class_property,
     command,
     device_property,
     run,
 )
 
 
+
+class ProcessingMode(IntEnum):
+    ANALOG = 0
+    THRESHOLD = 1
+    COUNTING = 2
+
+
 class MoenchZmqServer(Device):
-    """Custom implementation of zmq processing server for X-ray detector MÖNCH made in PSI which is integrated with a Tango device server."""
+    """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
+
+    processing_function = None
+    processing_function_enum = ProcessingMode(0)
 
     _manager = None
     _context = None
@@ -57,13 +68,11 @@ class MoenchZmqServer(Device):
         doc="port of the slsReceiver instance, must match the config",
         default_value="192.168.2.200",
     )
-
     ZMQ_RX_PORT = device_property(
         dtype=str,
         doc="ip of slsReceiver instance, must match the config",
         default_value="50003",
     )
-
     PROCESSING_CORES = device_property(
         dtype=int,
         doc="cores amount to process, up to 72 on MOENCH workstation",
@@ -74,6 +83,7 @@ class MoenchZmqServer(Device):
         doc="should the final image be flipped/inverted along y-axis",
         default_value=True,
     )
+
     pedestal = attribute(
         display_level=DispLevel.EXPERT,
         label="pedestal",
@@ -125,7 +135,6 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="cut-off value for thresholding",
     )
-
     counting_threshold = attribute(
         label="counting th",
         unit="ADU",
@@ -136,18 +145,29 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="cut-off value for counting",
     )
+    processing_mode = attribute(
+        label="mode",
+        dtype=ProcessingMode,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        fisallowed="isWriteAvailable",
+        doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2]",
+    )
+
     processed_frames = attribute(
         label="proc frames",
         dtype=int,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc="amount of already processed frames",
     )
     amount_frames = attribute(
         label="amount frames",
         dtype=int,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc="expected frames to receive from detector",
     )
+
     server_running = attribute(
         display_level=DispLevel.EXPERT,
         label="is server running?",
@@ -227,6 +247,20 @@ class MoenchZmqServer(Device):
     def read_counting_threshold(self):
         return self.shared_counting_threshold.value
 
+    def write_processing_mode(self, value):
+        # matching values and functions [ANALOG = 0, THRESHOLD = 1, COUNTING = 2]
+        self.processing_function_enum = ProcessingMode(value)
+        match self.processing_function_enum:
+            case ProcessingMode.ANALOG:
+                self.processing_function =  processing_functions.analog
+            case ProcessingMode.THRESHOLD:
+                self.processing_function = processing_functions.thresholding
+            case ProcessingMode.COUNTING:
+                self.processing_function = processing_functions.counting
+
+    def read_processing_mode(self):
+        return self.processing_function_enum
+
     def write_processed_frames(self, value):
         self.shared_processed_frames.value = value
 
@@ -269,12 +303,15 @@ class MoenchZmqServer(Device):
         while True:
             header, payload = await self.get_msg_pair()
             if payload is not None:
+                # wrap_function(header, payload, lock, shared_memory, processed_frames, frame_func, *args, **kwargs):
                 future = self._process_pool.submit(
-                    processing_func,
+                    wrap_function,
                     header,
                     payload,
-                    self.shared_memory_analog_img,
                     self._lock,
+                    self.shared_memory_analog_img, # need to changed corresponding to the frame_func
+                    self.shared_processed_frames,
+                    self.processing_function
                 )
                 future = asyncio.wrap_future(future)
 
@@ -320,6 +357,7 @@ class MoenchZmqServer(Device):
         pass
 
     def init_device(self):
+        """Initial tangoDS setup"""
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
@@ -343,18 +381,6 @@ class MoenchZmqServer(Device):
         self.shared_server_running = self._manager.Value("b", 0)
         self.shared_processed_frames = self._manager.Value("I", 0)
         self.shared_amount_frames = self._manager.Value("I", 0)
-        """
-        Here is a small explanation why the threshold is handled in other way as images buffers:
-        Despite the fact there is a thread safe "multiprocessing.Value" class for scalars (see above), there is no class for 2D array.
-        Yes, there are 1D arrays available (see "multiprocessing.Array"), but they need to be handled as python arrays and not as numpy arrays.
-        Continuos rearrangement of them into numpy arrays and vise versa considered as bad.
-        In python 3.8 shared memory feature was introduced which allows to work directly with memory and use a numpy array as proxy to it.
-        Documentation: https://docs.python.org/3.8/library/multiprocessing.shared_memory.html
-        A good example: https://luis-sena.medium.com/sharing-big-numpy-arrays-across-python-processes-abf0dc2a0ab2
-
-        tl;dr: we are able to share any numpy array between processes but in little other way
-        """
-
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros([400, 400], dtype=float).nbytes
         # allocating 4 arrays of this type
@@ -429,29 +455,31 @@ class MoenchZmqServer(Device):
         self._manager.shutdown()
         self._shared_memory_manager.shutdown()
 
-
 # concept for the future decorator to isolate concurrency and tango features from evaluation logic hidden in frame_func
-def wrap_function(header, payload, lock, shared_memory, frame_func, *args, **kwargs):
+def wrap_function(header, payload, lock, shared_memory, processed_frames, amount_frames, frame_func, *args, **kwargs):
+    """Decorator to wrap any processing function applied for a single frame 
+
+    Args:
+        header (dict): JSON formatted header from the detector 
+        payload (np.array): np.array formatted single frame from the detector 
+        lock (multiprocessing.Lock): lock (mutex) to provide synchronization for shared memory write
+        shared_memory (shared_memory.SharedMemory): shared memory instance for image buffer
+        processed_frames (multiprocessing.Value): shared value instance to increment to track how many frames were processed
+        amount_frames (multiprocessing.Value): shared value instance with amount of frames to expect
+        frame_func (function): any function with following signature: function(frame : np.array, dark : np.array, *args, **kwargs) -> result : np.array"
+    """
+    frame_index = header.get("frameIndex")
     frame_processed = frame_func(payload)
     lock.acquire()
+    print(f"Enter processing frame {frame_index}")
     img_buffer = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
     img_buffer += frame_processed
-    lock.release()
-
-
-# dummy processing function which increments the buffer
-def processing_func(header, payload, shared_memory, lock):
-    frame_index = header.get("frameIndex")
-    print(f"Enter processing frame {frame_index}")
-
-    lock.acquire()
-    buf_array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
-    print(f"begin shared value = {buf_array}")
-    buf_array += payload
-    lock.release()
-
+    processed_frames.value += 1
+    print(f"Processed frames {processed_frames.value}/{amount_frames.value}")
+    if processed_frames.value == amount_frames.value:
+        print("All frames processed => call \"stop receiver procedure\"")
     print(f"Left processing frame {frame_index}")
-
+    lock.release()
 
 if __name__ == "__main__":
     run((MoenchZmqServer,))
