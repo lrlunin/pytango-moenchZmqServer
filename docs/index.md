@@ -1,6 +1,3 @@
----
-title: Very long title
----
 # **Welcome to MOENCH ZMQ TangoDS documentation!**
 
 ![Screenshot](img/lenna.png)

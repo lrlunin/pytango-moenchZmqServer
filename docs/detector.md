@@ -1,3 +1,5 @@
+## Short outlook
+
 ## JSON headers
 This is the format for 6.1.2 (example with Moench):
 ```json
@@ -123,3 +125,83 @@ In case, you were wondering about the type:
 | flipRows         | 1 if rows should be flipped. Usually for Eiger bottom.                                                   |
 | quad             | 1 if its an Eiger quad.                                                                                  |
 | addJsonHeader    | Optional custom parameters that is required for   processing code.                                       |
+
+## Frame remapping
+`moench03T1ReceiverDataNew.h` in `slsDetectorPackage` lines `66:110`
+```cpp
+int nadc = 32;
+        int sc_width = 25;
+        int sc_height = 200;
+
+        int adc_nr[32] = {300, 325, 350, 375, 300, 325, 350, 375, 200, 225, 250,
+                          275, 200, 225, 250, 275, 100, 125, 150, 175, 100, 125,
+                          150, 175, 0,   25,  50,  75,  0,   25,  50,  75};
+
+        int row, col;
+
+        int isample;
+        int iadc;
+        int ix, iy;
+
+        int npackets = 40;
+        int i;
+        int adc4(0);
+	int off=sizeof(header);
+        for (int ip = 0; ip < npackets; ip++) {
+            for (int is = 0; is < 128; is++) {
+
+                for (iadc = 0; iadc < nadc; iadc++) {
+                    i = 128 * ip + is;
+                    adc4 = (int)iadc / 4;
+                    if (i < sc_width * sc_height) {
+                        //  for (int i=0; i<sc_width*sc_height; i++) {
+                        col = adc_nr[iadc] + (i % sc_width);
+                        if (adc4 % 2 == 0) {
+                            row = 199 - i / sc_width;
+                        } else {
+                            row = 200 + i / sc_width;
+                        }
+                        dataMap[row][col] = off +
+                                            (nadc * i + iadc) * 2; //+16*(ip+1);
+#ifdef HIGHZ
+                        dataMask[row][col] = 0x3fff; // invert data
+#endif
+                        if (dataMap[row][col] < 0 ||
+                            dataMap[row][col] >= off + nSamples * 2 * 32)
+                            std::cout << "Error: pointer " << dataMap[row][col]
+                                      << " out of range " << std::endl;
+                    }
+                }
+            }
+        }
+```
+will be pre-calculated and saved as numpy array of indexes with the following code:
+```python
+import numpy as np
+
+# 32 numbers
+nadc = 32
+adc_nr = [300, 325, 350, 375, 300, 325, 350, 375,
+    200, 225, 250, 275, 200, 225, 250, 275,
+    100, 125, 150, 175, 100, 125, 150, 175,
+    0, 25, 50, 75, 0, 25, 50, 75,
+]
+npackets = 40
+sc_width = 25
+sc_height = 200
+
+ind = np.zeros([400, 400], dtype=np.int32)
+for ip in range(npackets):
+    for iss in range(128):
+        for iadc in range(32):
+            i = 128 * ip + iss
+            adc4 = iadc // 4
+            if i < sc_width * sc_height:
+                col = adc_nr[iadc] + (i % sc_width)
+                if adc4 % 2 == 0:
+                    row = 199 - i // sc_width
+                else:
+                    row = 200 + i // sc_width
+                ind[row, col] = 32 * i + iadc
+np.save("reorder_pattern", ind)
+```
