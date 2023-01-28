@@ -1,42 +1,28 @@
 ## Dependencies
-* python 3.10
+* python >3.10
 * pyzmq
+* tornado
 * pytango
 * Pillow
 * scipy
 * skicit-image
 
 !!! warning
-    python3.8 is broken
+    Please note that this TangoDS explicitly uses `asyncio` API firstly introduced in python 3.8. However, there are several bugs in the python 3.8 which do not allow to use this TangoDS properly. These bugs were fixed in the version 3.10 of python. Since this version is required some python 3.10 specific features were used in the code.
 
 !!! note
     python3.10 works though
 
-## Inital setup
-tango ds properties table:
+## Initial setup
+To use this TangoDS you need to firstly register it in your Tango database. One of options is to [use Jive](https://tango-controls.readthedocs.io/en/latest/tutorials-and-howtos/how-tos/how-to-start-device-server.html?highlight=Server%20Wizard#starting-device-servers-with-jive).
 
-```python
-ZMQ_RX_IP = device_property(
-    dtype=str,
-    doc="port of the slsReceiver instance, must match the config",
-    default_value="192.168.2.200",
-)
+The following TangoDS properties should be specified: 
 
-ZMQ_RX_PORT = device_property(
-    dtype=str,
-    doc="ip of slsReceiver instance, must match the config",
-    default_value="50003",
-)
+| Property name      | Datatype  | Description                                                                                                                                                                                                                                                                    | Default value                                          |
+| ------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `ZMQ_RX_IP`        | `String`  | IP address where the detector opens ZMQ socket, must match the detector's config                                                                                                                                                                                               | `"192.168.2.200"` (workstation's IP on 10Gb interface) |
+| `ZMQ_RX_PORT`      | `String`  | Port where the detector opens ZMQ socket, must match the detector's config                                                                                                                                                                                                     | `"50003"`                                              |
+| `PROCESSING_CORES` | `Integer` | Amount of cores utilized/processes spawned for parallel processing of oncoming images                                                                                                                                                                                          | `20`                                                   |
+| `FLIP_IMAGE`       | `Boolean` | Flip the stored images in the `read_` functions of the TangoDS. Due to the other specification used for detector the oncoming image from the detector is flipped vertically. Please note that the images are stored in unflipped state and will be flipped only while reading. | `true`                                                 |
 
-PROCESSING_CORES = device_property(
-    dtype=int,
-    doc="cores amount to process, up to 72 on MOENCH workstation",
-    default_value=20,
-)
-FLIP_IMAGE = device_property(
-    dtype=bool,
-    doc="should the final image be flipped/inverted along y-axis",
-    default_value=True,
-)
-```
 
