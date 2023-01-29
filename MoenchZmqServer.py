@@ -49,15 +49,25 @@ class MoenchZmqServer(Device):
     # probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing
     # and further loaded with dynamic attributes
     shared_memory_pedestal = None
-    shared_memory_analog_img = None
-    shared_memory_threshold_img = None
-    shared_memory_counting_img = None
 
+    shared_memory_analog_img = None
+    shared_memory_analog_img_pumped = None
+
+    shared_memory_threshold_img = None
+    shared_memory_threshold_img_pumped = None
+
+    shared_memory_counting_img = None
+    shared_memory_counting_img_pumped = None
+
+    # shared scalar values
     shared_threshold = None
     shared_counting_threshold = None
     shared_processed_frames = None
-    shared_amount_frames = None
-    shared_server_running = False
+    shared_received_frames = None
+    shared_receive_frames = None
+    _split_pump = False
+
+    # reorder table for frame
     reorder_table = None
 
     _save_analog_img = True
@@ -105,6 +115,16 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ,
         doc="sum of images processed with subtracted pedestals",
     )
+    analog_img_pumped = attribute(
+        display_level=DispLevel.EXPERT,
+        label="analog img pumped",
+        dtype=float,
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ,
+        doc="sum of images processed with subtracted pedestals",
+    )
     threshold_img = attribute(
         display_level=DispLevel.EXPERT,
         label="threshold img",
@@ -115,9 +135,29 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ,
         doc='sum of "analog images" (with subtracted pedestal) processed with thresholding algorithm',
     )
+    threshold_img_pumped = attribute(
+        display_level=DispLevel.EXPERT,
+        label="threshold img pumped",
+        dtype=float,
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ,
+        doc='sum of "analog images" (with subtracted pedestal) processed with thresholding algorithm',
+    )
     counting_img = attribute(
         display_level=DispLevel.EXPERT,
         label="counting img",
+        dtype=float,
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ,
+        doc='sum of "analog images" (with subtracted pedestal) processed with counting algorithm',
+    )
+    counting_img_pumped = attribute(
+        display_level=DispLevel.EXPERT,
+        label="counting img pumped",
         dtype=float,
         dformat=AttrDataFormat.IMAGE,
         max_dim_x=400,
@@ -153,7 +193,7 @@ class MoenchZmqServer(Device):
         memorized=True,
         hw_memorized=True,
         fisallowed="isWriteAvailable",
-        doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2]",
+        doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2, PEDESTAL = 3]",
     )
 
     processed_frames = attribute(
@@ -162,19 +202,28 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ,
         doc="amount of already processed frames",
     )
-    amount_frames = attribute(
-        label="expected frames",
+    received_frames = attribute(
+        label="received frames",
         dtype=int,
         access=AttrWriteType.READ_WRITE,
         doc="expected frames to receive from detector",
     )
 
-    server_running = attribute(
+    receive_frames = attribute(
         display_level=DispLevel.EXPERT,
         label="is server running?",
         dtype=bool,
         access=AttrWriteType.READ,
         doc="if true - server is running, otherwise - not",
+    )
+
+    split_pump = attribute(
+        label="split (un)pumped",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="split odd and even frames",
     )
 
     save_analog_img = attribute(
@@ -205,7 +254,7 @@ class MoenchZmqServer(Device):
     )
 
     def write_pedestal(self, value):
-        self.shared_pedestal.value = value
+        self._write_shared_array(shared_memory=self.shared_memory_pedestal, value=value)
 
     def read_pedestal(self):
         return self._read_shared_array(
@@ -222,6 +271,16 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_analog_img, flip=self.FLIP_IMAGE
         )
 
+    def write_analog_img_pumped(self, value):
+        self._write_shared_array(
+            shared_memory=self.shared_memory_analog_img_pumped, value=value
+        )
+
+    def read_analog_img_pumped(self):
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_analog_img_pumped, flip=self.FLIP_IMAGE
+        )
+
     def write_threshold_img(self, value):
         self._write_shared_array(
             shared_memory=self.shared_memory_threshold_img, value=value
@@ -230,6 +289,16 @@ class MoenchZmqServer(Device):
     def read_threshold_img(self):
         return self._read_shared_array(
             shared_memory=self.shared_memory_threshold_img, flip=self.FLIP_IMAGE
+        )
+
+    def write_threshold_img_pumped(self, value):
+        self._write_shared_array(
+            shared_memory=self.shared_memory_threshold_img_pumped, value=value
+        )
+
+    def read_threshold_img_pumped(self):
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_threshold_img_pumped, flip=self.FLIP_IMAGE
         )
 
     def write_counting_img(self, value):
@@ -242,14 +311,26 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_counting_img, flip=self.FLIP_IMAGE
         )
 
+    def write_counting_img_pumped(self, value):
+        self._write_shared_array(
+            shared_memory=self.shared_memory_counting_img_pumped, value=value
+        )
+
+    def read_counting_img_pumped(self):
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_counting_img_pumped, flip=self.FLIP_IMAGE
+        )
+
     def write_threshold(self, value):
-        self.shared_threshold.value = value
+        with self.shared_threshold.get_lock():
+            self.shared_threshold.value = value
 
     def read_threshold(self):
         return self.shared_threshold.value
 
     def write_counting_threshold(self, value):
-        self.shared_counting_threshold.value = value
+        with self.shared_counting_threshold.get_lock():
+            self.shared_counting_threshold.value = value
 
     def read_counting_threshold(self):
         return self.shared_counting_threshold.value
@@ -257,34 +338,43 @@ class MoenchZmqServer(Device):
     def write_processing_mode(self, value):
         # matching values and functions [ANALOG = 0, THRESHOLD = 1, COUNTING = 2]
         self.processing_function_enum = ProcessingMode(value)
-        match self.processing_function_enum:
-            case ProcessingMode.ANALOG:
-                self.processing_function = processing_functions.analog
-            case ProcessingMode.THRESHOLD:
-                self.processing_function = processing_functions.thresholding
-            case ProcessingMode.COUNTING:
-                self.processing_function = processing_functions.counting
+        # will be
+        # match self.processing_function_enum:
+        #     case ProcessingMode.ANALOG:
+        #         self.processing_function = processing_functions.analog
+        #     case ProcessingMode.THRESHOLD:
+        #         self.processing_function = processing_functions.thresholding
+        #     case ProcessingMode.COUNTING:
+        #         self.processing_function = processing_functions.counting
 
     def read_processing_mode(self):
         return self.processing_function_enum
 
     def write_processed_frames(self, value):
-        self.shared_processed_frames.value = value
+        with self.shared_processed_frame.get_lock():
+            self.shared_processed_frames.value = value
 
     def read_processed_frames(self):
         return self.shared_processed_frames.value
 
-    def write_amount_frames(self, value):
-        self.shared_amount_frames.value = value
+    def write_received_frames(self, value):
+        with self.shared_received_frames.get_lock():
+            self.shared_received_frames.value = value
 
-    def read_amount_frames(self):
-        return self.shared_amount_frames.value
+    def read_received_frames(self):
+        return self.shared_received_frames.value
 
-    def write_server_running(self, value):
-        self.shared_server_running.value = int(value)
+    def write_receive_frames(self, value):
+        self.shared_receive_frames.value = int(value)
 
-    def read_server_running(self):
-        return bool(self.shared_server_running.value)
+    def read_receive_frames(self):
+        return bool(self.shared_receive_frames.value)
+
+    def write_split_pump(self, value):
+        self._split_pump = bool(value)
+
+    def read_split_pump(self):
+        return self._split_pump
 
     def write_save_analog_img(self, value):
         self._save_analog_img = value
@@ -309,25 +399,8 @@ class MoenchZmqServer(Device):
     async def main(self):
         while True:
             header, payload = await self.get_msg_pair()
-            if payload is not None:
-                # ANALOG = 0
-                # THRESHOLD = 1
-                # COUNTING = 2
-                # PEDESTAL = 3
-                # def wrap_function(
-                # mode,
-                # header,
-                # payload,
-                # lock,
-                # shared_memories,
-                # processed_frames,
-                # amount_frames,
-                # frame_func,
-                # threshold,
-                # counting_threshold,
-                # *args,
-                # **kwargs)
-
+            if payload is not None and self.read_receive_frames():
+                self.shared_received_frames.value += 1
                 future = self._process_pool.submit(
                     wrap_function,
                     self.processing_function_enum,
@@ -336,15 +409,17 @@ class MoenchZmqServer(Device):
                     self._lock,
                     [
                         self.shared_memory_analog_img,
+                        self.shared_memory_analog_img_pumped,
                         self.shared_memory_threshold_img,
+                        self.shared_memory_threshold_img_pumped,
                         self.shared_memory_counting_img,
+                        self.shared_memory_counting_img_pumped,
                         self.shared_memory_pedestal,
                     ],  # need to changed corresponding to the frame_func
                     self.shared_processed_frames,
-                    self.shared_amount_frames,
-                    self.processing_function,
                     self.shared_threshold,
                     self.shared_counting_threshold,
+                    self.read_split_pump(),
                 )
                 future = asyncio.wrap_future(future)
 
@@ -391,22 +466,42 @@ class MoenchZmqServer(Device):
     @command
     def start_receiver(self):
         empty = np.zeros([400, 400], dtype=float)
-        self.write_server_running(True)
+        # clear previous values
         self.write_processed_frames(0)
         self.write_analog_img(empty)
         self.write_counting_img(empty)
         self.write_threshold_img(empty)
+        self.write_analog_img_pumped(empty)
+        self.write_threshold_img_pumped(empty)
+        self.write_counting_img_pumped(empty)
+        self.write_receive_frames(True)
         self.set_state(DevState.RUNNING)
 
-    @command
-    def stop_receiver(self):
-        self.write_server_running(False)
+    async def async_stop_receiver(self, received_frames):
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.block_stop_receiver, received_frames)
+
+    def block_stop_receiver(self, received_frames_at_the_time):
+        self.write_receive_frames(False)
+        while received_frames_at_the_time != self.shared_processed_frames.value:
+            time.sleep(1)
+        if self.read_processing_mode() == ProcessingMode.PEDESTAL:
+            pedestal_not_averaged = self.read_pedestal()
+            averaged_pedestal = pedestal_not_averaged / received_frames_at_the_time
+            self.write_pedestal(averaged_pedestal)
+        # HERE ALL POST HOOKS
+        # if processmode == pedestal:
+        # shared_pedestal / received frames
+        self.update_images_events()
+        self.save_files()
         self.set_state(DevState.ON)
-        # self.save_files()
 
     @command
-    def acquire_pedestals(self):
-        pass
+    async def stop_receiver(self):
+        received_frames = self.shared_received_frames.value
+        print(f"received {received_frames} frames")
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.async_stop_receiver(received_frames))
 
     def init_device(self):
         """Initial tangoDS setup"""
@@ -424,17 +519,20 @@ class MoenchZmqServer(Device):
         self._shared_memory_manager = SharedMemoryManager()
         # starting the shared memory manager
         self._shared_memory_manager.start()
-        # default values of properties do not work without database though ¯\_(ツ)_/¯
-        processing_cores_amount = 16  # self.PROCESSING_CORES
+
+        processing_cores_amount = self.PROCESSING_CORES
         zmq_ip = self.ZMQ_RX_IP
         zmq_port = self.ZMQ_RX_PORT
 
-        # using shared threadsafe Value instance from multiprocessing
+        # using shared thread-safe Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
         self.shared_counting_threshold = self._manager.Value("f", 0)
-        self.shared_server_running = self._manager.Value("b", 0)
+        self.shared_receive_frames = self._manager.Value("b", 0)
         self.shared_processed_frames = self._manager.Value("I", 0)
+        self.shared_received_frames = self._manager.Value("I", 0)
         self.shared_amount_frames = self._manager.Value("I", 0)
+        self.shared_split_pump = self._manager.Value("b", 0)
+
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros([400, 400], dtype=float).nbytes
         # allocating 4 arrays of this type
@@ -444,11 +542,20 @@ class MoenchZmqServer(Device):
         self.shared_memory_analog_img = self._shared_memory_manager.SharedMemory(
             size=img_bytes
         )
+        self.shared_memory_counting_img_pumped = (
+            self._shared_memory_manager.SharedMemory(size=img_bytes)
+        )
         self.shared_memory_threshold_img = self._shared_memory_manager.SharedMemory(
             size=img_bytes
         )
+        self.shared_memory_threshold_img_pumped = (
+            self._shared_memory_manager.SharedMemory(size=img_bytes)
+        )
         self.shared_memory_counting_img = self._shared_memory_manager.SharedMemory(
             size=img_bytes
+        )
+        self.shared_memory_counting_img_pumped = (
+            self._shared_memory_manager.SharedMemory(size=img_bytes)
         )
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
@@ -462,6 +569,9 @@ class MoenchZmqServer(Device):
         self.set_change_event("analog_img", True, False)
         self.set_change_event("threshold_img", True, False)
         self.set_change_event("counting_img", True, False)
+        self.set_change_event("analog_img_pumped", True, False)
+        self.set_change_event("threshold_img_pumped", True, False)
+        self.set_change_event("counting_img_pumped", True, False)
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
@@ -470,6 +580,15 @@ class MoenchZmqServer(Device):
         self.push_change_event("analog_img", self.read_analog_img(), 400, 400),
         self.push_change_event("threshold_img", self.read_threshold_img(), 400, 400)
         self.push_change_event("counting_img", self.read_counting_img(), 400, 400)
+        self.push_change_event(
+            "analog_img_pumped", self.read_analog_img_pumped(), 400, 400
+        ),
+        self.push_change_event(
+            "threshold_img_pumped", self.read_threshold_img_pumped(), 400, 400
+        )
+        self.push_change_event(
+            "counting_img_pumped", self.read_counting_img_pumped(), 400, 400
+        )
 
     # save files on disk for pictures buffers
     def save_files(self, path, filename, index):
@@ -485,16 +604,21 @@ class MoenchZmqServer(Device):
         if self.read_save_analog_img():
             im = Image.fromarray(self.read_analog_img())
             im.save(f"{savepath}_{index}_analog.tiff")
+            im_pumped = Image.fromarray(self.read_analog_img_pumped())
+            im_pumped.save(f"{savepath}_{index}_analog_pumped.tiff")
 
         if self.read_save_threshold_img():
+            threshold = self.read_threshold()
             im = Image.fromarray(self.read_threshold_img())
-            im.save(f"{savepath}_{index}_threshold_{self.read_threshold()}.tiff")
+            im.save(f"{savepath}_{index}_threshold_{threshold}.tiff")
+            im_pumped = Image.fromarray(self.read_threshold_img_pumped())
+            im_pumped.save(f"{savepath}_{index}_threshold_{threshold}_pumped.tiff")
 
-        if self.read_save_counting_img():
-            im = Image.fromarray(self.read_analog_img())
-            im.save(
-                f"{savepath}_{index}_counting_{self.read_counting_threshold()}.tiff"
-            )
+        # if self.read_save_counting_img():
+        #     im = Image.fromarray(self.read_analog_img())
+        #     im.save(
+        #         f"{savepath}_{index}_counting_{self.read_counting_threshold()}.tiff"
+        #     )
 
     def _init_zmq_socket(self, zmq_ip: str, zmq_port: str):
         endpoint = f"tcp://{zmq_ip}:{zmq_port}"
@@ -510,7 +634,6 @@ class MoenchZmqServer(Device):
         self._shared_memory_manager.shutdown()
 
 
-# concept for the future decorator to isolate concurrency and tango features from evaluation logic hidden in frame_func
 def wrap_function(
     mode,
     header,
@@ -518,58 +641,69 @@ def wrap_function(
     lock,
     shared_memories,
     processed_frames,
-    amount_frames,
-    frame_func,
     threshold,
     counting_threshold,
-    *args,
-    **kwargs,
+    split_pump,
 ):
-    """Decorator to wrap any processing function applied for a single frame
-
-    Args:
-        header (dict): JSON formatted header from the detector
-        payload (np.array): np.array formatted single frame from the detector
-        lock (multiprocessing.Lock): lock (mutex) to provide synchronization for shared memory access
-        shared_memory (shared_memory.SharedMemory): shared memory instance for image buffer
-        processed_frames (multiprocessing.Value): shared value instance to increment to track how many frames were processed
-        amount_frames (multiprocessing.Value): shared value instance with amount of frames to expect
-        frame_func (function): any function with following signature: function(frame : np.array, dark : np.array, *args, **kwargs) -> result : np.array"
-    """
+    # [
+    #     shared_memory_analog_img,
+    #     shared_memory_analog_img_pumped,
+    #     shared_memory_threshold_img,
+    #     shared_memory_threshold_img_pumped,
+    #     shared_memory_counting_img,
+    #     shared_memory_counting_img_pumped,
+    #     shared_memory_pedestal,
+    # ]
     frame_index = header.get("frameIndex")
     shared_memory = None
+    shared_memory_pumped = None
     pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[3].buf)
     match mode:
         case ProcessingMode.ANALOG:
             shared_memory = shared_memories[0]
+            shared_memory_pumped = shared_memories[1]
         case ProcessingMode.THRESHOLD:
-            shared_memory = shared_memories[1]
-        case ProcessingMode.COUNTING:
             shared_memory = shared_memories[2]
+            shared_memory_pumped = shared_memories[3]
+        case ProcessingMode.COUNTING:
+            shared_memory = shared_memories[4]
+            shared_memory_pumped = shared_memories[5]
         case ProcessingMode.PEDESTAL:
-            shared_memory = shared_memories[3]
+            shared_memory = shared_memories[6]
 
-    # frame_processed = frame_func(payload)
     lock.acquire()
     print(f"Enter processing frame {frame_index}")
-    img_buffer = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
+    normal_array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
+    pumped_array = np.ndarray((400, 400), dtype=float, buffer=shared_memory_pumped.buf)
     match mode:
         case ProcessingMode.ANALOG:
             payload -= pedestal
-            img_buffer += payload
+            if split_pump:
+                if frame_index % 2 == 0:
+                    normal_array += payload
+                else:
+                    pumped_array += payload
+            else:
+                normal_array += payload
         case ProcessingMode.THRESHOLD:
             payload -= pedestal
-            img_buffer += payload > threshold
+            thresholded = payload > threshold
+            if split_pump:
+                if frame_index % 2 == 0:
+                    normal_array += thresholded
+                else:
+                    pumped_array += thresholded
+
         case ProcessingMode.COUNTING:
+            # not working yet
             pass
         case ProcessingMode.PEDESTAL:
-            img_buffer += payload / amount_frames
-    print(f"Left processing frame {frame_index}")
-
+            # just summing up because amount of successfully received frames is unknown
+            # they will be averaged in stop_server post hook
+            normal_array += payload
     processed_frames.value += 1
-    print(f"Processed frames {processed_frames.value}/{amount_frames.value}")
-    if processed_frames.value == amount_frames.value:
-        print('All frames processed => call "stop receiver procedure"')
+    print(f"Left processing frame {frame_index}")
+    print(f"Processed frames {processed_frames.value}")
     lock.release()
 
 
