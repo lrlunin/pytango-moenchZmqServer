@@ -308,7 +308,7 @@ The classes for synchronization are available in <code>multiprocessing</code> li
 <span class="c1"># 1</span>
 <span class="c1"># 2</span>
 </code></pre></div>
-<p>However, there are only basic data types as scalar <code>Value</code> and only 1D array <code>Array</code> available. The  $n \times m$ 2D array can be possibly stored as 1D array with the length of $l = n \cdot m$. But it is painful to read, reshape, perform an operation, reshape again and store an array. Is it possible to have a shared <code>numpy</code> array?</p>
+<p>However, there are only basic data types as scalar <code>Value</code> and only 1D array <code>Array</code> available. The  <span class="arithmatex">\(n \times m\)</span> 2D array can be possibly stored as 1D array with the length of <span class="arithmatex">\(l = n \cdot m\)</span>. But it is painful to read, reshape, perform an operation, reshape again and store an array. Is it possible to have a shared <code>numpy</code> array?</p>
 <p>Yes, but it is a little bit complex In python 3.8 a shared memory feature was introduced and this allows to work directly with a memory space and use than assign a <code>numpy</code> array to work with it. Here is an example of creating this kind of <code>numpy</code>array:
 <div class="highlight"><pre><span></span><code><span class="c1"># a manager which allocates the shared memory</span>
 <span class="n">shared_memory_manager</span> <span class="o">=</span>  <span class="n">multiprocessing</span><span class="o">.</span><span class="n">managers</span><span class="o">.</span><span class="n">SharedMemoryManager</span><span class="p">()</span>
@@ -350,5 +350,8 @@ The classes for synchronization are available in <code>multiprocessing</code> li
 </div>
 <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.e5c33ebb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
 <script src="../assets/javascripts/bundle.51d95adb.min.js"></script>
+<script src="../javascripts/mathjax.js"></script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script src="https://unpkg.com/mermaid@8.8.0/dist/mermaid.min.js"></script><script>mermaid.initialize({});</script><script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body>
 </html>
