@@ -144,11 +144,15 @@
 <a class="md-nav__link" href="#multiprocessing">
     Multiprocessing
   </a>
-</li>
+<nav aria-label="Multiprocessing" class="md-nav">
+<ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#shared-memory">
-    Shared memory
+<a class="md-nav__link" href="#thread-safe-variables">
+    Thread-safe variables
   </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -186,11 +190,15 @@
 <a class="md-nav__link" href="#multiprocessing">
     Multiprocessing
   </a>
-</li>
+<nav aria-label="Multiprocessing" class="md-nav">
+<ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#shared-memory">
-    Shared memory
+<a class="md-nav__link" href="#thread-safe-variables">
+    Thread-safe variables
   </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -201,18 +209,123 @@
 <article class="md-content__inner md-typeset">
 <h1>Coding guideline</h1>
 <h2 id="asynchronous-io">Asynchronous IO<a class="headerlink" href="#asynchronous-io" title="Permanent link">¶</a></h2>
-<p>smart way to handle zmq requests</p>
+<p>First introduced in Python 3.8, asynchronous IO allow you to create server clients in a much more elegant way.</p>
+<p>The <code>asyncio</code> philosophy differs from the convenient programming style and can look confusing at the very beginning. I would recommend this learn materials to make yourself familiar with the basics:</p>
+<ul>
+<li><a href="https://www.youtube.com/watch?v=t5Bo1Je9EmE&amp;pp=ugMICgJydRABGAE%3D">26 min video with basics</a></li>
+<li><a href="https://docs.python.org/3.10/library/asyncio.html">Official python 3.10 asyncio documentation</a> </li>
+</ul>
+<p>In case of this particular server it is possible to handle ZMQ stream in more appropriate way. Instead of continouns polling of messages from ZMQ stream</p>
+<blockquote>
+<p>before:
+<div class="highlight"><pre><span></span><code><span class="n">context</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+<span class="n">socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUB</span><span class="p">)</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">flags</span><span class="o">=</span><span class="n">zmq</span><span class="o">.</span><span class="n">NOBLOCK</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">zmq</span><span class="o">.</span><span class="n">ZMQError</span><span class="p">:</span>
+        <span class="c1"># no packet more in the stream</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
+</code></pre></div></p>
+</blockquote>
+<p>they can be received asynchronously that program "awaits" each oncoming message</p>
+<blockquote>
+<p>after:
+<div class="highlight"><pre><span></span><code><span class="n">context</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+<span class="n">socket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">SUB</span><span class="p">)</span>
+<span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="k">await</span> <span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+</code></pre></div></p>
+</blockquote>
+<p>The TangoDS can work in asynchronous IO mode too if the variable <code>green_mode</code> set to <code>tango.GreenMode.Asyncio</code>. In this case we are able to use the save <code>event_loop</code> for asynchronous receive of ZMQ packets from detector and tango communication as well.</p>
 <h2 id="multiprocessing">Multiprocessing<a class="headerlink" href="#multiprocessing" title="Permanent link">¶</a></h2>
-<p>ProcessPoolExecutor, memory manager and locks (mutex)</p>
-<h2 id="shared-memory">Shared memory<a class="headerlink" href="#shared-memory" title="Permanent link">¶</a></h2>
-<p>Here is a small explanation why the threshold is handled in other way as images buffers:
-Despite the fact there is a thread safe "multiprocessing.Value" class for scalars (see above), there is no class for 2D array.
-Yes, there are 1D arrays available (see "multiprocessing.Array"), but they need to be handled as python arrays and not as numpy arrays.
-Continuos rearrangement of them into numpy arrays and vise versa considered as bad.
-In python 3.8 shared memory feature was introduced which allows to work directly with memory and use a numpy array as proxy to it.
-Documentation: https://docs.python.org/3.8/library/multiprocessing.shared_memory.html
-A good example: https://luis-sena.medium.com/sharing-big-numpy-arrays-across-python-processes-abf0dc2a0ab2</p>
-<p>tl;dr: we are able to share any numpy array between processes but in little other way</p>
+<p>Usually concurrency in most of programming languages (as Java, or C++) is using threads. One of the features of the python language, namely the implementation of its default interpreter CPython is the so-called <a href="https://en.wikipedia.org/wiki/Global_interpreter_lock">global interpreter lock (GIL)</a> which actually allows to run only one thread at the same time. However, there are ways to bypass this feature with standard language methods.</p>
+<p>There is a <a href="https://docs.python.org/3.10/library/multiprocessing.html"><code>multiprocessing</code></a> package for this, which creates additional processes (which are not actually threads but do the same thing). There are various high API tools to make a program which utilizes more than one core of the CPU.</p>
+<h3 id="thread-safe-variables">Thread-safe variables<a class="headerlink" href="#thread-safe-variables" title="Permanent link">¶</a></h3>
+<p>The main difference in the development of the multiprocessing programs compared to the single thread programs is the synchronization between processes. This means that even the most commong operations as reading or assigning a variable's value need to be thread-safe.</p>
+<p>Here is an example how a simple incrementing the value <code>counter</code> from by 1 two processes can cause a problem:
+<div class="mermaid">sequenceDiagram
+    Process A-&gt;&gt;+Memory: read counter value
+    Memory-&gt;&gt;Process A: read counter = 0
+    Process B-&gt;&gt;+Memory: read counter value
+    Memory-&gt;&gt;Process B: read counter = 0
+    Process A--&gt;Process A: incrementing counter by 1
+    Process A-&gt;&gt;+Memory: write counter =  1
+    Process B--&gt;Process B: incrementing counter by 1
+    Process B-&gt;&gt;+Memory: write counter =  1
+</div>
+So the <code>counter</code> value which expected to be 2 will be 1. The reason of it is the fact that incrementing a variable is not an <a href="https://en.wikipedia.org/wiki/Linearizability">atomic operation</a> itself and consists of one read operation and then write operation. Actually (depending on the CPU and programming language architecture) read and write operations itself can be not atomic. Thus, we need a synchronization between two threads in order to perform the operations in the right order.</p>
+<p>The most trivial example is so called <a href="https://en.wikipedia.org/wiki/Mutual_exclusion">mutex</a>. This is an object shared between processes which can be acquired or released. While the shared lock is acquired by one of the processes the other processes will wait till it is released. Here is the upper example with using a lock:</p>
+<p><div class="mermaid">sequenceDiagram
+    Process A-&gt;&gt;+Shared lock: acquire lock
+    Process B--&gt;&gt;Shared lock: try acquire lock
+    Shared lock--&gt;&gt;Process B: lock is already acquired by Process A
+    Process A-&gt;&gt;+Memory: read counter value
+    Memory-&gt;&gt;Process A: read counter = 0
+    Process A--&gt;Process A: incrementing counter by 1
+    Process A-&gt;&gt;+Memory: write counter =  1
+    Process A-&gt;&gt;+Shared lock: release lock
+    Process B-&gt;&gt;+Shared lock: acquire lock
+    Process B-&gt;&gt;+Memory: read counter value
+    Memory-&gt;&gt;Process B: read counter = 1
+    Process B--&gt;Process B: incrementing counter by 1
+    Process B-&gt;&gt;+Memory: write counter =  2
+    Process B-&gt;&gt;+Shared lock: release lock
+</div>
+The classes for synchronization are available in <code>multiprocessing</code> library. Here is the upper example implemented in python:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># initialize a shared lock instance</span>
+<span class="n">shared_lock</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<span class="c1"># initialize a shared integer variable</span>
+<span class="n">shared_counter</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s2">"i"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># function which will be executed in the process A</span>
+<span class="k">def</span> <span class="nf">func_A</span><span class="p">(</span><span class="n">lock</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+<span class="c1"># function which will be executed in the process B</span>
+<span class="k">def</span> <span class="nf">func_B</span><span class="p">(</span><span class="n">lock</span><span class="p">,</span> <span class="n">counter</span><span class="p">):</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span>
+
+<span class="c1"># create a pool with two processes</span>
+<span class="n">process_pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">ProcessPoolExecutor</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># assign to run a function func_A with</span>
+<span class="c1"># the args shared_lock and shared_counter with one of the process in pool</span>
+<span class="n">process_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">func_A</span><span class="p">,</span> <span class="n">shared_lock</span><span class="p">,</span> <span class="n">shared_counter</span><span class="p">)</span>
+
+<span class="c1"># assign to run a function func_B with</span>
+<span class="c1"># the args shared_lock and shared_counter with one of the process in pool</span>
+<span class="n">process_pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">func_B</span><span class="p">,</span> <span class="n">shared_lock</span><span class="p">,</span> <span class="n">shared_counter</span><span class="p">)</span>
+
+<span class="c1"># Output:</span>
+<span class="c1"># 1</span>
+<span class="c1"># 2</span>
+</code></pre></div>
+<p>However, there are only basic data types as scalar <code>Value</code> and only 1D array <code>Array</code> available. The  $n \times m$ 2D array can be possibly stored as 1D array with the length of $l = n \cdot m$. But it is painful to read, reshape, perform an operation, reshape again and store an array. Is it possible to have a shared <code>numpy</code> array?</p>
+<p>Yes, but it is a little bit complex In python 3.8 a shared memory feature was introduced and this allows to work directly with a memory space and use than assign a <code>numpy</code> array to work with it. Here is an example of creating this kind of <code>numpy</code>array:
+<div class="highlight"><pre><span></span><code><span class="c1"># a manager which allocates the shared memory</span>
+<span class="n">shared_memory_manager</span> <span class="o">=</span>  <span class="n">multiprocessing</span><span class="o">.</span><span class="n">managers</span><span class="o">.</span><span class="n">SharedMemoryManager</span><span class="p">()</span>
+<span class="c1"># get how many bytes need to be allocated and shared for an 400x400 float numpy array</span>
+<span class="c1"># the values of this array will be never used </span>
+<span class="n">array_length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">nbytes</span>
+<span class="c1"># saving the pointer to the shared memory</span>
+<span class="n">mem_pointer</span> <span class="o">=</span> <span class="n">shared_memory_manager</span><span class="o">.</span><span class="n">SharedMemory</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">array_length</span><span class="p">)</span>
+<span class="c1"># assign to a numpy array to store its values</span>
+<span class="c1"># under the given shared memory address</span>
+<span class="n">numpy_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">((</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">buffer</span><span class="o">=</span><span class="n">mem_pointer</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+</code></pre></div></p>
+<p>Learn more:</p>
+<ul>
+<li><a href="https://docs.python.org/3.10/library/multiprocessing.shared_memory.html">Official python 3.10 shared memory documentation</a></li>
+<li><a href="https://luis-sena.medium.com/sharing-big-numpy-arrays-across-python-processes-abf0dc2a0ab2">Comprehensive example</a></li>
+</ul>
 </article>
 </div>
 </div>
@@ -237,5 +350,5 @@ A good example: https://luis-sena.medium.com/sharing-big-numpy-arrays-across-pyt
 </div>
 <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.e5c33ebb.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
 <script src="../assets/javascripts/bundle.51d95adb.min.js"></script>
-<script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body>
+<script src="https://unpkg.com/mermaid@8.8.0/dist/mermaid.min.js"></script><script>mermaid.initialize({});</script><script>document$.subscribe(() => {const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});})</script></body>
 </html>

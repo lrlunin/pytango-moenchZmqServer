@@ -34,7 +34,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#json-headers">
+<a class="md-skip" href="#json-header">
           Skip to content
         </a>
 </div>
@@ -141,9 +141,32 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#json-headers">
-    JSON headers
+<a class="md-nav__link" href="#json-header">
+    JSON header
   </a>
+<nav aria-label="JSON header" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#changes-between-the-firmware-versions">
+    Changes between the firmware versions
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#payload">
+    Payload
+  </a>
+<nav aria-label="Payload" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#frame-remapping">
+    Frame remapping
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -168,9 +191,32 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#json-headers">
-    JSON headers
+<a class="md-nav__link" href="#json-header">
+    JSON header
   </a>
+<nav aria-label="JSON header" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#changes-between-the-firmware-versions">
+    Changes between the firmware versions
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#payload">
+    Payload
+  </a>
+<nav aria-label="Payload" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#frame-remapping">
+    Frame remapping
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -180,55 +226,10 @@
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
 <h1>Detector reference</h1>
-<h2 id="json-headers">JSON headers<a class="headerlink" href="#json-headers" title="Permanent link">¶</a></h2>
-<p>This is the format for 6.1.2 (example with Moench):
-<div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">"jsonversion"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"bitmode"</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"fileIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"detshape"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">],</span>
-<span class="w">    </span><span class="nt">"shape"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="mi">400</span><span class="p">,</span>
-<span class="w">        </span><span class="mi">400</span>
-<span class="w">    </span><span class="p">],</span>
-<span class="w">    </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">320000</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"acqIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"frameIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="mf">100.0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"fname"</span><span class="p">:</span><span class="w"> </span><span class="s2">"//run"</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"completeImage"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"frameNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"expLength"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"packetNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">239</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"bunchId"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"modId"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"row"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"reserved"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"debug"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"roundRNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"detType"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"flipRows"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"quad"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">"addJsonHeader"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">"emin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500"</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></p>
-<p>Changes from  6.x.x to 7.0.0:
-4 field names have changed from 6.x.x to 7.x.x because they have also been changed in the detector udp header. 
-Since the meaning has not changed, the udp header version stays the same as well as the  zmq header version.
-detSpec1 &lt;- bunchId
-detSpec2 &lt;- reserved
-detSpec3 &lt;- debug
-detSpec4 &lt;- roundRNumber</p>
-<p>In case, you were wondering about the type:
+<p>Detector sends two separate ZMQ messages for each acquired frame coming after each other. </p>
+<h2 id="json-header">JSON header<a class="headerlink" href="#json-header" title="Permanent link">¶</a></h2>
+<p>The first one is a JSON header where all necessary information is stored.</p>
+<p>This is the JSON header signature for the firmware version 6.1.2 for a MOENCH detector:
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
 <span class="w">    </span><span class="nt">"jsonversion"</span><span class="p">:</span><span class="w"> </span><span class="err">u</span><span class="kc">ns</span><span class="err">ig</span><span class="kc">ne</span><span class="err">d</span><span class="w"> </span><span class="err">i</span><span class="kc">nt</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">"bitmode"</span><span class="p">:</span><span class="w"> </span><span class="err">u</span><span class="kc">ns</span><span class="err">ig</span><span class="kc">ne</span><span class="err">d</span><span class="w"> </span><span class="err">i</span><span class="kc">nt</span><span class="p">,</span>
@@ -269,7 +270,8 @@ detSpec4 &lt;- roundRNumber</p>
 <span class="w">        </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="err">s</span><span class="kc">tr</span><span class="err">i</span><span class="kc">n</span><span class="err">g</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div></p>
+</code></pre></div>
+with a comprehensive description for each field </p>
 <table>
 <thead>
 <tr>
@@ -392,6 +394,139 @@ detSpec4 &lt;- roundRNumber</p>
 </tr>
 </tbody>
 </table>
+<p>Here is an example of the received message from MOENCH detector:
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">"jsonversion"</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"bitmode"</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"fileIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"detshape"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">],</span>
+<span class="w">    </span><span class="nt">"shape"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">400</span><span class="p">,</span><span class="w"> </span><span class="mi">400</span><span class="p">],</span>
+<span class="w">    </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">320000</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"acqIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"frameIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="mf">100.0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"fname"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mnt/LocalData/DATA/MOENCH/20230128_run/230128"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"data"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"completeImage"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"frameNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"expLength"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"packetNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"bunchId"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"modId"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"row"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"column"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"reserved"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"debug"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"roundRNumber"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"detType"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"flipRows"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"quad"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"addJsonHeader"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"detectorMode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"analog"</span><span class="p">,</span><span class="w"> </span><span class="nt">"frameMode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"raw"</span><span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div>
+At the end of each acquisition the MOENCH detector sends a dummy header where almost all fields (the most important one is <code>"data" : 0</code>) are zeros or empty. After a dummy JSON header no frame of the detector will be transmitted and should not be awaited by the server.</p>
+<h3 id="changes-between-the-firmware-versions">Changes between the firmware versions<a class="headerlink" href="#changes-between-the-firmware-versions" title="Permanent link">¶</a></h3>
+<p>Changes from  6.x.x to 7.0.0:
+4 field names have changed from 6.x.x to 7.x.x because they have also been changed in the detector udp header. 
+Since the meaning has not changed, the udp header version stays the same as well as the  zmq header version.
+detSpec1 &lt;- bunchId
+detSpec2 &lt;- reserved
+detSpec3 &lt;- debug
+detSpec4 &lt;- roundRNumber</p>
+<h2 id="payload">Payload<a class="headerlink" href="#payload" title="Permanent link">¶</a></h2>
+<p>The second ZMQ packet consists of the acquired capture represented as a 1D array of bytes where 160000 values are stored in a <code>unsigned 16-bit integer</code> (<code>np.uint16</code>) data type. Nevertheless, it is not a just flatten 400x400 2D array where the pixels line up one by one but in a strange order defined (as I understand) by reading from the ADC on the detector's FPGA board.</p>
+<h3 id="frame-remapping">Frame remapping<a class="headerlink" href="#frame-remapping" title="Permanent link">¶</a></h3>
+<p>In the main repository <code>slsDetectorPackage</code> we can find a reference <code>moench03T1ReceiverDataNew.h#66:110</code> which reoders the pixels in a frame:
+<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">nadc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">32</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">sc_width</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">25</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">sc_height</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">200</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">adc_nr</span><span class="p">[</span><span class="mi">32</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="mi">325</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">375</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="mi">325</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">375</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span>
+<span class="w">                          </span><span class="mi">275</span><span class="p">,</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="mi">225</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"> </span><span class="mi">275</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">125</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">175</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">125</span><span class="p">,</span>
+<span class="w">                          </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">175</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">25</span><span class="p">,</span><span class="w">  </span><span class="mi">50</span><span class="p">,</span><span class="w">  </span><span class="mi">75</span><span class="p">,</span><span class="w">  </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">25</span><span class="p">,</span><span class="w">  </span><span class="mi">50</span><span class="p">,</span><span class="w">  </span><span class="mi">75</span><span class="p">};</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">col</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">isample</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">iadc</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">ix</span><span class="p">,</span><span class="w"> </span><span class="n">iy</span><span class="p">;</span>
+
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">npackets</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">40</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="p">;</span>
+<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="nf">adc4</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">off</span><span class="o">=</span><span class="k">sizeof</span><span class="p">(</span><span class="n">header</span><span class="p">);</span>
+<span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">ip</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">ip</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">npackets</span><span class="p">;</span><span class="w"> </span><span class="n">ip</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">128</span><span class="p">;</span><span class="w"> </span><span class="n">is</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">iadc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">iadc</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">nadc</span><span class="p">;</span><span class="w"> </span><span class="n">iadc</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">128</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">ip</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">is</span><span class="p">;</span>
+<span class="w">                    </span><span class="n">adc4</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">iadc</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span>
+<span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">sc_width</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">sc_height</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="c1">//  for (int i=0; i&lt;sc_width*sc_height; i++) {</span>
+<span class="w">                        </span><span class="n">col</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">adc_nr</span><span class="p">[</span><span class="n">iadc</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">sc_width</span><span class="p">);</span>
+<span class="w">                        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">adc4</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="n">row</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">199</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sc_width</span><span class="p">;</span>
+<span class="w">                        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="n">row</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">200</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">sc_width</span><span class="p">;</span>
+<span class="w">                        </span><span class="p">}</span>
+<span class="w">                        </span><span class="n">dataMap</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">off</span><span class="w"> </span><span class="o">+</span>
+<span class="w">                                            </span><span class="p">(</span><span class="n">nadc</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">iadc</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="p">;</span><span class="w"> </span><span class="c1">//+16*(ip+1);</span>
+<span class="cp">#ifdef HIGHZ</span>
+<span class="w">                        </span><span class="n">dataMask</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mh">0x3fff</span><span class="p">;</span><span class="w"> </span><span class="c1">// invert data</span>
+<span class="cp">#endif</span>
+<span class="w">                        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">dataMap</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">||</span>
+<span class="w">                            </span><span class="n">dataMap</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">off</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">nSamples</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">32</span><span class="p">)</span>
+<span class="w">                            </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">"Error: pointer "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">dataMap</span><span class="p">[</span><span class="n">row</span><span class="p">][</span><span class="n">col</span><span class="p">]</span>
+<span class="w">                                      </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">" out of range "</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+</code></pre></div>
+As the variables used above depend on the type of detector, they remain constant for a single detector model. This allows us to compute this "pixel rearrangement map" just once and then use it for each frame.</p>
+<p>So I just rewrite the upper C++ code in python and saved the <code>reorder_map</code> which is basically a 400x400 <code>numpy</code> array which consists of indexes.
+<div class="highlight"><pre><span></span><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="c1"># 32 numbers</span>
+<span class="n">nadc</span> <span class="o">=</span> <span class="mi">32</span>
+<span class="n">adc_nr</span> <span class="o">=</span> <span class="p">[</span><span class="mi">300</span><span class="p">,</span> <span class="mi">325</span><span class="p">,</span> <span class="mi">350</span><span class="p">,</span> <span class="mi">375</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">325</span><span class="p">,</span> <span class="mi">350</span><span class="p">,</span> <span class="mi">375</span><span class="p">,</span>
+    <span class="mi">200</span><span class="p">,</span> <span class="mi">225</span><span class="p">,</span> <span class="mi">250</span><span class="p">,</span> <span class="mi">275</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="mi">225</span><span class="p">,</span> <span class="mi">250</span><span class="p">,</span> <span class="mi">275</span><span class="p">,</span>
+    <span class="mi">100</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">150</span><span class="p">,</span> <span class="mi">175</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">150</span><span class="p">,</span> <span class="mi">175</span><span class="p">,</span>
+    <span class="mi">0</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">npackets</span> <span class="o">=</span> <span class="mi">40</span>
+<span class="n">sc_width</span> <span class="o">=</span> <span class="mi">25</span>
+<span class="n">sc_height</span> <span class="o">=</span> <span class="mi">200</span>
+
+<span class="c1"># indexes need to be integer</span>
+<span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">400</span><span class="p">,</span> <span class="mi">400</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ip</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">npackets</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">iss</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">128</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">iadc</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">32</span><span class="p">):</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">128</span> <span class="o">*</span> <span class="n">ip</span> <span class="o">+</span> <span class="n">iss</span>
+            <span class="n">adc4</span> <span class="o">=</span> <span class="n">iadc</span> <span class="o">//</span> <span class="mi">4</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">sc_width</span> <span class="o">*</span> <span class="n">sc_height</span><span class="p">:</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">adc_nr</span><span class="p">[</span><span class="n">iadc</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="n">sc_width</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">adc4</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">row</span> <span class="o">=</span> <span class="mi">199</span> <span class="o">-</span> <span class="n">i</span> <span class="o">//</span> <span class="n">sc_width</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">row</span> <span class="o">=</span> <span class="mi">200</span> <span class="o">+</span> <span class="n">i</span> <span class="o">//</span> <span class="n">sc_width</span>
+                <span class="n">ind</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="mi">32</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">iadc</span>
+<span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"reorder_map"</span><span class="p">,</span> <span class="n">ind</span><span class="p">)</span>
+</code></pre></div>
+Thanks to the built-in <code>numpy</code> feature, we can easily rearrange the 1D array coming from the detector into 2D with the right order:
+<div class="highlight"><pre><span></span><code><span class="c1"># load the map once</span>
+<span class="n">reorder_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"reorder_map.npy"</span><span class="p">)</span>
+
+<span class="c1"># obtain the 1D array represents frame from ZMQ </span>
+<span class="n">msg</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+<span class="c1"># saving a raw 1D array</span>
+<span class="n">raw_frame</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">)</span>
+<span class="c1"># rearrange the frame in the right order</span>
+<span class="n">frame</span> <span class="o">=</span> <span class="n">raw_frame</span><span class="p">[</span><span class="n">reorder_map</span><span class="p">]</span>
+</code></pre></div></p>
 </article>
 </div>
 </div>

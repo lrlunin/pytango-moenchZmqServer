@@ -136,8 +136,8 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#inital-setup">
-    Inital setup
+<a class="md-nav__link" href="#initial-setup">
+    Initial setup
   </a>
 </li>
 </ul>
@@ -178,8 +178,8 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#inital-setup">
-    Inital setup
+<a class="md-nav__link" href="#initial-setup">
+    Initial setup
   </a>
 </li>
 </ul>
@@ -192,8 +192,9 @@
 <h1>Installation</h1>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">¶</a></h2>
 <ul>
-<li>python 3.10</li>
+<li>python &gt;=3.10</li>
 <li>pyzmq</li>
+<li>tornado</li>
 <li>pytango</li>
 <li>Pillow</li>
 <li>scipy</li>
@@ -201,37 +202,47 @@
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>python3.8 is broken</p>
+<p>Please note that this TangoDS explicitly uses <code>asyncio</code> API firstly introduced in python 3.8. However, there are several bugs in the python 3.8 which do not allow to use this TangoDS properly. These bugs were fixed in the version 3.10 of python. Since this version is required some python 3.10 specific features were used in the code.</p>
 </div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>python3.10 works though</p>
-</div>
-<h2 id="inital-setup">Inital setup<a class="headerlink" href="#inital-setup" title="Permanent link">¶</a></h2>
-<p>tango ds properties table:</p>
-<div class="highlight"><pre><span></span><code><span class="n">ZMQ_RX_IP</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
-    <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc</span><span class="o">=</span><span class="s2">"port of the slsReceiver instance, must match the config"</span><span class="p">,</span>
-    <span class="n">default_value</span><span class="o">=</span><span class="s2">"192.168.2.200"</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">ZMQ_RX_PORT</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
-    <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
-    <span class="n">doc</span><span class="o">=</span><span class="s2">"ip of slsReceiver instance, must match the config"</span><span class="p">,</span>
-    <span class="n">default_value</span><span class="o">=</span><span class="s2">"50003"</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="n">PROCESSING_CORES</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
-    <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
-    <span class="n">doc</span><span class="o">=</span><span class="s2">"cores amount to process, up to 72 on MOENCH workstation"</span><span class="p">,</span>
-    <span class="n">default_value</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="n">FLIP_IMAGE</span> <span class="o">=</span> <span class="n">device_property</span><span class="p">(</span>
-    <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
-    <span class="n">doc</span><span class="o">=</span><span class="s2">"should the final image be flipped/inverted along y-axis"</span><span class="p">,</span>
-    <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="p">)</span>
-</code></pre></div>
+<h2 id="initial-setup">Initial setup<a class="headerlink" href="#initial-setup" title="Permanent link">¶</a></h2>
+<p>To use this TangoDS you need to firstly register it in your Tango database. One of options is to <a href="https://tango-controls.readthedocs.io/en/latest/tutorials-and-howtos/how-tos/how-to-start-device-server.html?highlight=Server%20Wizard#starting-device-servers-with-jive">use Jive</a>.</p>
+<p>The following TangoDS properties should be specified: </p>
+<table>
+<thead>
+<tr>
+<th>Property name</th>
+<th>Datatype</th>
+<th>Description</th>
+<th>Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ZMQ_RX_IP</code></td>
+<td><code>String</code></td>
+<td>IP address where the detector opens ZMQ socket, must match the detector's config</td>
+<td><code>"192.168.2.200"</code> (workstation's IP on 10Gb interface)</td>
+</tr>
+<tr>
+<td><code>ZMQ_RX_PORT</code></td>
+<td><code>String</code></td>
+<td>Port where the detector opens ZMQ socket, must match the detector's config</td>
+<td><code>"50003"</code></td>
+</tr>
+<tr>
+<td><code>PROCESSING_CORES</code></td>
+<td><code>Integer</code></td>
+<td>Amount of cores utilized/processes spawned for parallel processing of oncoming images</td>
+<td><code>20</code></td>
+</tr>
+<tr>
+<td><code>FLIP_IMAGE</code></td>
+<td><code>Boolean</code></td>
+<td>Flip the stored images in the <code>read_</code> functions of the TangoDS. Due to the other specification used for detector the oncoming image from the detector is flipped vertically. Please note that the images are stored in unflipped state and will be flipped only while reading.</td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table>
 </article>
 </div>
 </div>
