@@ -1,57 +1,8 @@
-## Short outlook
+Detector sends two separate ZMQ messages for each acquired frame coming after each other. 
+## JSON header
+The first one is a JSON header where all necessary information is stored.
 
-## JSON headers
-This is the format for 6.1.2 (example with Moench):
-```json
-{
-    "jsonversion": 4,
-    "bitmode": 16,
-    "fileIndex": 0,
-    "detshape": [
-        1,
-        1
-    ],
-    "shape": [
-        400,
-        400
-    ],
-    "size": 320000,
-    "acqIndex": 4,
-    "frameIndex": 0,
-    "progress": 100.0,
-    "fname": "//run",
-    "data": 1,
-    "completeImage": 1,
-    "frameNumber": 4,
-    "expLength": 0,
-    "packetNumber": 239,
-    "bunchId": 0,
-    "timestamp": 0,
-    "modId": 0,
-    "row": 0,
-    "column": 0,
-    "reserved": 0,
-    "debug": 0,
-    "roundRNumber": 0,
-    "detType": 5,
-    "version": 1,
-    "flipRows": 0,
-    "quad": 0,
-    "addJsonHeader": {
-        "emin": "500"
-    }
-}
-```
-
-Changes from  6.x.x to 7.0.0:
-4 field names have changed from 6.x.x to 7.x.x because they have also been changed in the detector udp header. 
-Since the meaning has not changed, the udp header version stays the same as well as the  zmq header version.
-detSpec1 <- bunchId
-detSpec2 <- reserved
-detSpec3 <- debug
-detSpec4 <- roundRNumber
-
-In case, you were wondering about the type:
+This is the JSON header signature for the firmware version 6.1.2 for a MOENCH detector:
 ```json
 {
     "jsonversion": unsigned int,
@@ -94,6 +45,7 @@ In case, you were wondering about the type:
     }
 }
 ```
+with a comprehensive description for each field 
 
 | Field            | Description                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------- |
@@ -126,8 +78,56 @@ In case, you were wondering about the type:
 | quad             | 1 if its an Eiger quad.                                                                                  |
 | addJsonHeader    | Optional custom parameters that is required for   processing code.                                       |
 
-## Frame remapping
-`moench03T1ReceiverDataNew.h` in `slsDetectorPackage` lines `66:110`
+Here is an example of the received message from MOENCH detector:
+```json
+{
+    "jsonversion": 4,
+    "bitmode": 16,
+    "fileIndex": 6,
+    "detshape": [1, 1],
+    "shape": [400, 400],
+    "size": 320000,
+    "acqIndex": 1,
+    "frameIndex": 0,
+    "progress": 100.0,
+    "fname": "/mnt/LocalData/DATA/MOENCH/20230128_run/230128",
+    "data": 1,
+    "completeImage": 1,
+    "frameNumber": 1,
+    "expLength": 0,
+    "packetNumber": 40,
+    "bunchId": 0,
+    "timestamp": 0,
+    "modId": 0,
+    "row": 0,
+    "column": 0,
+    "reserved": 0,
+    "debug": 0,
+    "roundRNumber": 0,
+    "detType": 5,
+    "version": 1,
+    "flipRows": 0,
+    "quad": 0,
+    "addJsonHeader": {"detectorMode": "analog", "frameMode": "raw"},
+}
+```
+At the end of each acquisition the MOENCH detector sends a dummy header where almost all fields (the most important one is `"data" : 0`) are zeros or empty. After a dummy JSON header no frame of the detector will be transmitted and should not be awaited by the server.
+
+
+### Changes between the firmware versions 
+Changes from  6.x.x to 7.0.0:
+4 field names have changed from 6.x.x to 7.x.x because they have also been changed in the detector udp header. 
+Since the meaning has not changed, the udp header version stays the same as well as the  zmq header version.
+detSpec1 <- bunchId
+detSpec2 <- reserved
+detSpec3 <- debug
+detSpec4 <- roundRNumber
+
+## Payload
+The second ZMQ packet consists of the acquired capture represented as a 1D array of bytes where 160000 values are stored in a `unsigned 16-bit integer` (`np.uint16`) data type. Nevertheless, it is not a just flatten 400x400 2D array where the pixels line up one by one but in a strange order defined (as I understand) by reading from the ADC on the detector's FPGA board.
+
+### Frame remapping
+In the main repository `slsDetectorPackage` we can find a reference `moench03T1ReceiverDataNew.h#66:110` which reoders the pixels in a frame:
 ```cpp
 int nadc = 32;
         int sc_width = 25;
@@ -175,7 +175,9 @@ int nadc = 32;
             }
         }
 ```
-will be pre-calculated and saved as numpy array of indexes with the following code:
+As the variables used above depend on the type of detector, they remain constant for a single detector model. This allows us to compute this "pixel rearrangement map" just once and then use it for each frame.
+
+So I just rewrite the upper C++ code in python and saved the `reorder_map` which is basically a 400x400 `numpy` array which consists of indexes.
 ```python
 import numpy as np
 
@@ -190,6 +192,7 @@ npackets = 40
 sc_width = 25
 sc_height = 200
 
+# indexes need to be integer
 ind = np.zeros([400, 400], dtype=np.int32)
 for ip in range(npackets):
     for iss in range(128):
@@ -203,5 +206,17 @@ for ip in range(npackets):
                 else:
                     row = 200 + i // sc_width
                 ind[row, col] = 32 * i + iadc
-np.save("reorder_pattern", ind)
+np.save("reorder_map", ind)
+```
+Thanks to the built-in `numpy` feature, we can easily rearrange the 1D array coming from the detector into 2D with the right order:
+```python
+# load the map once
+reorder_map = np.load("reorder_map.npy")
+
+# obtain the 1D array represents frame from ZMQ 
+msg = socket.recv()
+# saving a raw 1D array
+raw_frame = np.frombuffer(msg, dtype=np.uint16)
+# rearrange the frame in the right order
+frame = raw_frame[reorder_map]
 ```
