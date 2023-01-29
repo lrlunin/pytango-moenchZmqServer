@@ -1,5 +1,5 @@
 ## Dependencies
-* python >3.10
+* python >=3.10
 * pyzmq
 * tornado
 * pytango
@@ -9,9 +9,6 @@
 
 !!! warning
     Please note that this TangoDS explicitly uses `asyncio` API firstly introduced in python 3.8. However, there are several bugs in the python 3.8 which do not allow to use this TangoDS properly. These bugs were fixed in the version 3.10 of python. Since this version is required some python 3.10 specific features were used in the code.
-
-!!! note
-    python3.10 works though
 
 ## Initial setup
 To use this TangoDS you need to firstly register it in your Tango database. One of options is to [use Jive](https://tango-controls.readthedocs.io/en/latest/tutorials-and-howtos/how-tos/how-to-start-device-server.html?highlight=Server%20Wizard#starting-device-servers-with-jive).
