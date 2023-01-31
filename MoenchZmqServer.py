@@ -4,26 +4,29 @@ import asyncio
 import ctypes as cp
 import json
 import multiprocessing as mp
-import os.path
+from os import (path, makedirs, listdir)
 import time
+from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
 import processing_functions
 
+import re
 import numpy as np
 from enum import IntEnum
 import tango
 import zmq
 import zmq.asyncio
 from PIL import Image
-from tango import AttrDataFormat, AttrWriteType, DevState, DispLevel, GreenMode
+from tango import AttrDataFormat, AttrWriteType, DevState, DispLevel, GreenMode, Except
 from tango.server import (
     Device,
     attribute,
     command,
     device_property,
     run,
+    
 )
 
 
@@ -98,12 +101,17 @@ class MoenchZmqServer(Device):
         doc="should the final image be flipped/inverted along y-axis",
         default_value=True,
     )
+    SAVE_ROOT_PATH = device_property(
+        dtype=str,
+        doc="folder to save in",
+        default_value="/mnt/LocalData/DATA/MOENCH",
+    )
 
     filename = attribute(
         label="filename",
         dtype=str,
         access=AttrWriteType.READ_WRITE,
-        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+        doc="File prefix",
     )
     filepath = attribute(
         label="filepath",
@@ -281,8 +289,19 @@ class MoenchZmqServer(Device):
     def read_filename(self):
         return self._filename
 
-    def write_filepath(self, value):
-        self._filepath = value
+    def write_filepath(self, folders):
+        root_path = self.SAVE_ROOT_PATH
+        joined_path = path.join(root_path, folders)
+        if not path.isdir(joined_path):
+            try:
+                makedirs(joined_path)
+            except OSError:
+                Except.throw_exception(
+                "Cannot create directory!",
+                f"no permissions to create dir {joined_path}",
+                "write_filepath",
+            )
+        self._filepath = joined_path
 
     def read_filepath(self):
         return self._filepath
@@ -551,6 +570,27 @@ class MoenchZmqServer(Device):
         loop = asyncio.get_event_loop()
         loop.create_task(self.async_stop_receiver(received_frames))
 
+    def get_max_file_index(self, filepath, filename):
+        # full_file_name_like = 202301031_run_5_.....tiff
+        # get list of files in the directory
+        file_list = listdir(filepath)
+        
+        # getting files which begin with the same filename
+        captures_list = list(filter(lambda file_name : file_name.startswith(filename), file_list))
+        # if there is no files with this filename -> 0
+        if len(captures_list) == 0:
+            return 0
+        # if there is any file with the same filename
+        else:
+            # finding index with regexp while index is a decimal number which stays after "filename_" 
+            # (\d*) - is an indented group 1
+            r = re.compile(rf"^{filename}_(\d*)")
+            # regex objects which match the upper statement
+            reg = map(r.search, captures_list)
+            # getting max from the group 1 <=> index
+            max_index = max(list(map(lambda match: int(match.group(1)), reg)))
+            return max_index
+
     def init_device(self):
         """Initial tangoDS setup"""
         Device.init_device(self)
@@ -571,6 +611,15 @@ class MoenchZmqServer(Device):
         processing_cores_amount = self.PROCESSING_CORES
         zmq_ip = self.ZMQ_RX_IP
         zmq_port = self.ZMQ_RX_PORT
+
+        # creating default values for folders, filename and check index
+        # formatting date like 20230131
+        date_formatted = datetime.today().strftime("%Y%m%d")
+        self.write_filepath(f"{date_formatted}_run")
+        self.write_filename(f"{date_formatted}_run")
+        max_file_index = self.get_max_file_index(self.read_filepath(), self.read_filename())
+        self.write_file_index(max_file_index + 1)
+
 
         # using shared thread-safe Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
@@ -648,22 +697,39 @@ class MoenchZmqServer(Device):
             filename (str): name to save
             index (str): capture index
         """
-        path = self.read_filepath()
+        filepath = self.read_filepath()
         filename = self.read_filename()
         index = self.read_file_index()
-        savepath = os.path.join(path, filename)
+        # need to be refactored soon
+        savepath = path.join(filepath, filename)
+        time_str = datetime.now().strftime("%H:%M:%S")
         if self.read_save_analog_img():
             im = Image.fromarray(self.read_analog_img())
-            im.save(f"{savepath}_{index}_analog.tiff")
-            im_pumped = Image.fromarray(self.read_analog_img_pumped())
-            im_pumped.save(f"{savepath}_{index}_analog_pumped.tiff")
+            full_path_unpumped = f"{savepath}_{index}_analog"
+
+            if path.isfile(f"{full_path_unpumped}.tiff"):
+                full_path_unpumped += f"_{time_str}"
+            im.save(f"{full_path_unpumped}.tiff")
+            if self.read_split_pump():
+                im_pumped = Image.fromarray(self.read_analog_img_pumped())
+                full_path_pumped = f"{savepath}_{index}_analog_pumped"
+                if path.isfile(f"{full_path_pumped}.tiff"):
+                    full_path_pumped += f"_{time_str}"
+                im_pumped.save(f"{full_path_pumped}.tiff")
 
         if self.read_save_threshold_img():
             threshold = self.read_threshold()
             im = Image.fromarray(self.read_threshold_img())
-            im.save(f"{savepath}_{index}_threshold_{threshold}.tiff")
-            im_pumped = Image.fromarray(self.read_threshold_img_pumped())
-            im_pumped.save(f"{savepath}_{index}_threshold_{threshold}_pumped.tiff")
+            full_path_unpumped = f"{savepath}_{index}_threshold_{threshold}"
+            if path.isfile(f"{full_path_unpumped}.tiff"):
+                full_path_unpumped += f"_{time_str}"
+            im.save(f"{full_path_unpumped}tiff")
+            if self.read_split_pump():
+                im_pumped = Image.fromarray(self.read_threshold_img_pumped())
+                full_path_pumped = f"{savepath}_{index}_threshold_{threshold}_pumped"
+                if path.isfile(f"{full_path_pumped}.tiff"):
+                    full_path_pumped += f"_{time_str}"
+                im_pumped.save(f"{full_path_pumped}.tiff")
 
         # if self.read_save_counting_img():
         #     im = Image.fromarray(self.read_analog_img())
@@ -739,7 +805,7 @@ def wrap_function(
                 normal_array += payload
         case ProcessingMode.THRESHOLD:
             payload -= pedestal
-            thresholded = payload > threshold
+            thresholded = payload > threshold.value
             if split_pump:
                 if frame_index % 2 == 0:
                     normal_array += thresholded
