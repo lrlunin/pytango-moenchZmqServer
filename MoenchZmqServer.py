@@ -4,7 +4,7 @@ import asyncio
 import ctypes as cp
 import json
 import multiprocessing as mp
-from os import (path, makedirs, listdir)
+from os import path, makedirs, listdir
 import time
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
@@ -26,7 +26,6 @@ from tango.server import (
     command,
     device_property,
     run,
-    
 )
 
 
@@ -297,10 +296,10 @@ class MoenchZmqServer(Device):
                 makedirs(joined_path)
             except OSError:
                 Except.throw_exception(
-                "Cannot create directory!",
-                f"no permissions to create dir {joined_path}",
-                "write_filepath",
-            )
+                    "Cannot create directory!",
+                    f"no permissions to create dir {joined_path}",
+                    "write_filepath",
+                )
         self._filepath = joined_path
 
     def read_filepath(self):
@@ -561,6 +560,8 @@ class MoenchZmqServer(Device):
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_files()
+        index = self.read_file_index()
+        self.write_file_index(index + 1)
         self.set_state(DevState.ON)
 
     @command
@@ -574,15 +575,17 @@ class MoenchZmqServer(Device):
         # full_file_name_like = 202301031_run_5_.....tiff
         # get list of files in the directory
         file_list = listdir(filepath)
-        
+
         # getting files which begin with the same filename
-        captures_list = list(filter(lambda file_name : file_name.startswith(filename), file_list))
+        captures_list = list(
+            filter(lambda file_name: file_name.startswith(filename), file_list)
+        )
         # if there is no files with this filename -> 0
         if len(captures_list) == 0:
             return 0
         # if there is any file with the same filename
         else:
-            # finding index with regexp while index is a decimal number which stays after "filename_" 
+            # finding index with regexp while index is a decimal number which stays after "filename_"
             # (\d*) - is an indented group 1
             r = re.compile(rf"^{filename}_(\d*)")
             # regex objects which match the upper statement
@@ -617,9 +620,10 @@ class MoenchZmqServer(Device):
         date_formatted = datetime.today().strftime("%Y%m%d")
         self.write_filepath(f"{date_formatted}_run")
         self.write_filename(f"{date_formatted}_run")
-        max_file_index = self.get_max_file_index(self.read_filepath(), self.read_filename())
+        max_file_index = self.get_max_file_index(
+            self.read_filepath(), self.read_filename()
+        )
         self.write_file_index(max_file_index + 1)
-
 
         # using shared thread-safe Value instance from multiprocessing
         self.shared_threshold = self._manager.Value("f", 0)
