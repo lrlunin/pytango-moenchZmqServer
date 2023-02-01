@@ -124,7 +124,12 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ_WRITE,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
-
+    previous_file_index = attribute(
+        label="previous file_index",
+        dtype=int,
+        access=AttrWriteType.READ,
+        doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+    )
     pedestal = attribute(
         display_level=DispLevel.EXPERT,
         label="pedestal",
@@ -311,6 +316,11 @@ class MoenchZmqServer(Device):
     def read_file_index(self):
         return self._file_index
 
+    def write_previous_file_index(self, value):
+        pass
+    def read_previous_file_index(self):
+        return self.read_file_index() - 1
+        
     def write_pedestal(self, value):
         self._write_shared_array(shared_memory=self.shared_memory_pedestal, value=value)
 
