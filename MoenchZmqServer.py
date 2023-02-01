@@ -123,13 +123,13 @@ class MoenchZmqServer(Device):
         doc="dir where data files will be written",
     )
     file_index = attribute(
-        label="file_index",
+        label="next file index",
         dtype=int,
         access=AttrWriteType.READ_WRITE,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
     )
     previous_file_index = attribute(
-        label="previous file_index",
+        label="previous file index",
         dtype=int,
         access=AttrWriteType.READ,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
@@ -225,14 +225,14 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="cut-off value for counting",
     )
-    processing_mode = attribute(
-        label="mode",
-        dtype=ProcessingMode,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2, PEDESTAL = 3]",
-    )
+    # processing_mode = attribute(
+    #     label="mode",
+    #     dtype=ProcessingMode,
+    #     access=AttrWriteType.READ_WRITE,
+    #     memorized=True,
+    #     hw_memorized=True,
+    #     doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2, PEDESTAL = 3]",
+    # )
 
     processed_frames = attribute(
         label="proc frames",
