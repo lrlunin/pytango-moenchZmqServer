@@ -68,6 +68,10 @@ class MoenchZmqServer(Device):
     shared_received_frames = None
     shared_receive_frames = None
     _split_pump = False
+    _process_pedestal_img = False
+    _process_analog_img = True
+    _process_threshold_img = True
+    _process_counting_img = False
 
     # reorder table for frame
     reorder_table = None
@@ -260,6 +264,42 @@ class MoenchZmqServer(Device):
         doc="split odd and even frames",
     )
 
+    process_pedestal_img = attribute(
+        label="process pedestal",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="use this acquisition series as pedestal",
+    )
+
+    process_analog_img = attribute(
+        label="process analog",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="process analog while acquisition",
+    )
+
+    process_threshold_img = attribute(
+        label="process threshold",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="process threshold while acquisition",
+    )
+
+    process_counting_img = attribute(
+        label="process counting",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="process counting while acquisition",
+    )
+
     save_analog_img = attribute(
         label="save analog",
         dtype=bool,
@@ -318,9 +358,10 @@ class MoenchZmqServer(Device):
 
     def write_previous_file_index(self, value):
         pass
+
     def read_previous_file_index(self):
         return self.read_file_index() - 1
-        
+
     def write_pedestal(self, value):
         self._write_shared_array(shared_memory=self.shared_memory_pedestal, value=value)
 
@@ -444,6 +485,30 @@ class MoenchZmqServer(Device):
     def read_split_pump(self):
         return self._split_pump
 
+    def write_process_pedestal_img(self, value):
+        self._process_pedestal_img = value
+
+    def read_process_pedestal_img(self):
+        return self._process_pedestal_img
+
+    def write_process_analog_img(self, value):
+        self._process_analog_img = value
+
+    def read_process_analog_img(self):
+        return self._process_analog_img
+
+    def write_process_threshold_img(self, value):
+        self._process_threshold_img = value
+
+    def read_process_threshold_img(self):
+        return self._process_threshold_img
+
+    def write_process_counting_img(self, value):
+        self._process_counting_img = value
+
+    def read_process_counting_img(self):
+        return self._process_counting_img
+
     def write_save_analog_img(self, value):
         self._save_analog_img = value
 
@@ -472,7 +537,7 @@ class MoenchZmqServer(Device):
                 self.shared_received_frames.value += 1
                 future = self._process_pool.submit(
                     wrap_function,
-                    self.read_processing_mode(),
+                    [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()],
                     header,
                     payload.astype(float),
                     self._lock,
@@ -563,7 +628,8 @@ class MoenchZmqServer(Device):
         self.write_receive_frames(False)
         while received_frames_at_the_time != self.shared_processed_frames.value:
             time.sleep(1)
-        if self.read_processing_mode() is ProcessingMode.PEDESTAL:
+        # averaging pedestal which we have accumulated
+        if self.read_process_pedestal_img():
             pedestal_not_averaged = self.read_pedestal()
             averaged_pedestal = pedestal_not_averaged / received_frames_at_the_time
             self.write_pedestal(averaged_pedestal)
@@ -580,6 +646,11 @@ class MoenchZmqServer(Device):
         print(f"received {received_frames} frames")
         loop = asyncio.get_event_loop()
         loop.create_task(self.async_stop_receiver(received_frames))
+
+    @command
+    def reset_pedestal(self):
+        empty = np.zeros([400,400], dtype=float)
+        self.write_pedestal(empty)
 
     def get_max_file_index(self, filepath, filename):
         # full_file_name_like = 202301031_run_5_.....tiff
@@ -737,7 +808,7 @@ class MoenchZmqServer(Device):
             full_path_unpumped = f"{savepath}_{index}_threshold_{threshold}"
             if path.isfile(f"{full_path_unpumped}.tiff"):
                 full_path_unpumped += f"_{time_str}"
-            im.save(f"{full_path_unpumped}tiff")
+            im.save(f"{full_path_unpumped}.tiff")
             if self.read_split_pump():
                 im_pumped = Image.fromarray(self.read_threshold_img_pumped())
                 full_path_pumped = f"{savepath}_{index}_threshold_{threshold}_pumped"
@@ -766,7 +837,7 @@ class MoenchZmqServer(Device):
 
 
 def wrap_function(
-    mode,
+    use_modes,
     header,
     payload,
     lock,
@@ -776,6 +847,7 @@ def wrap_function(
     counting_threshold,
     split_pump,
 ):
+    # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
     #     shared_memory_analog_img,
     #     shared_memory_analog_img_pumped,
@@ -786,53 +858,56 @@ def wrap_function(
     #     shared_memory_pedestal,
     # ]
     frame_index = header.get("frameIndex")
-    shared_memory = None
-    shared_memory_pumped = None
-    pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[6].buf)
-    match mode:
-        case ProcessingMode.ANALOG:
-            shared_memory = shared_memories[0]
-            shared_memory_pumped = shared_memories[1]
-        case ProcessingMode.THRESHOLD:
-            shared_memory = shared_memories[2]
-            shared_memory_pumped = shared_memories[3]
-        case ProcessingMode.COUNTING:
-            shared_memory = shared_memories[4]
-            shared_memory_pumped = shared_memories[5]
+    
+    process_pedestal, process_analog, process_threshold, process_counting = use_modes
 
-    if mode is not ProcessingMode.PEDESTAL:
-        normal_array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
-        pumped_array = np.ndarray(
-            (400, 400), dtype=float, buffer=shared_memory_pumped.buf
-        )
+    analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
+    analog_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[1].buf)
+    threshold_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[2].buf)
+    threshold_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[3].buf)
+    counting_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[4].buf)
+    counting_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[5].buf)
+    pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[6].buf)
+
     lock.acquire()
     print(f"Enter processing frame {frame_index}")
-    match mode:
-        case ProcessingMode.ANALOG:
+
+    if process_pedestal:
+        # just summing up because amount of successfully received frames is unknown
+        # they will be averaged in stop_server post hook
+        pedestal += payload
+    else:
+        if process_analog:
+            print("Processing analog...")
             payload -= pedestal
             if split_pump:
                 if frame_index % 2 == 0:
-                    normal_array += payload
+                    analog_img += payload
                 else:
-                    pumped_array += payload
+                    analog_img_pumped += payload
             else:
-                normal_array += payload
-        case ProcessingMode.THRESHOLD:
+                analog_img += payload
+        if process_threshold:
+            print("Processing threshold...")
             payload -= pedestal
             thresholded = payload > threshold.value
             if split_pump:
                 if frame_index % 2 == 0:
-                    normal_array += thresholded
+                    threshold_img += thresholded
                 else:
-                    pumped_array += thresholded
-
-        case ProcessingMode.COUNTING:
-            # not working yet
-            pass
-        case ProcessingMode.PEDESTAL:
-            # just summing up because amount of successfully received frames is unknown
-            # they will be averaged in stop_server post hook
-            pedestal += payload
+                    threshold_img_pumped += thresholded
+            else:
+                threshold_img += thresholded
+        if process_counting:
+            payload -= pedestal
+            clustered =  payload > counting_threshold.value
+            if split_pump:
+                if frame_index % 2 == 0:
+                    counting_img += clustered
+                else:
+                    counting_img_pumped += clustered
+            else:
+                counting_img += clustered
     processed_frames.value += 1
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
