@@ -627,7 +627,6 @@ class MoenchZmqServer(Device):
         self.max_frame_index.value = 0
 
         self._empty_shared_array(self.shared_memory_single_frames)
-        self._empty_shared_array(self.shared_memory_single_frames)
         self._empty_shared_array(self.shared_memory_analog_img)
         self._empty_shared_array(self.shared_memory_analog_img_pumped)
         self._empty_shared_array(self.shared_memory_threshold_img)
@@ -914,7 +913,7 @@ def wrap_function(
     )
 
     lock.acquire()
-    max_file_index.value = np.max(max_file_index.value, frame_index)
+    max_file_index.value = max(max_file_index.value, frame_index)
     single_frame_buffer[frame_index] = payload
     payload = payload.astype(float)
     print(f"Enter processing frame {frame_index}")
