@@ -87,6 +87,8 @@ class MoenchZmqServer(Device):
     _filepath = ""
     _file_index = 0
 
+    _abort_await = False
+
     ZMQ_RX_IP = device_property(
         dtype=str,
         doc="port of the slsReceiver instance, must match the config",
@@ -642,9 +644,11 @@ class MoenchZmqServer(Device):
 
     def block_stop_receiver(self, received_frames_at_the_time):
         self.write_receive_frames(False)
-        while received_frames_at_the_time != self.shared_processed_frames.value:
-            time.sleep(1)
-        # averaging pedestal which we have accumulated
+        while self.shared_processed_frames.value < received_frames_at_the_time and not self._abort_await:
+            print(f"abort wait: {self._abort_await}")
+            time.sleep(0.5)
+        # averaging pedetal which we have accumulated
+        self._abort_await = False
         if self.read_process_pedestal_img():
             pedestal_not_averaged = self.read_pedestal()
             averaged_pedestal = pedestal_not_averaged / received_frames_at_the_time
@@ -662,6 +666,10 @@ class MoenchZmqServer(Device):
         print(f"received {received_frames} frames")
         loop = asyncio.get_event_loop()
         loop.create_task(self.async_stop_receiver(received_frames))
+
+    @command
+    def abort_receiver(self):
+        self._abort_await = True
 
     @command
     def reset_pedestal(self):
