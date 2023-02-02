@@ -61,6 +61,9 @@ class MoenchZmqServer(Device):
     shared_memory_counting_img = None
     shared_memory_counting_img_pumped = None
 
+    shared_memory_single_frames = None
+    max_frame_index = None
+
     # shared scalar values
     shared_threshold = None
     shared_counting_threshold = None
@@ -108,6 +111,9 @@ class MoenchZmqServer(Device):
         dtype=str,
         doc="folder to save in",
         default_value="/mnt/LocalData/DATA/MOENCH",
+    )
+    SINGLE_FRAME_BUFFER_SIZE = device_property(
+        dtype=int, doc="how much single frames can be stored", default_value=10000
     )
 
     filename = attribute(
@@ -537,9 +543,16 @@ class MoenchZmqServer(Device):
                 self.shared_received_frames.value += 1
                 future = self._process_pool.submit(
                     wrap_function,
-                    [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()],
+                    self.shared_memory_single_frames,
+                    self.max_frame_index,
+                    [
+                        self.read_process_pedestal_img(),
+                        self.read_process_analog_img(),
+                        self.read_process_threshold_img(),
+                        self.read_process_counting_img(),
+                    ],
                     header,
-                    payload.astype(float),
+                    payload,
                     self._lock,
                     [
                         self.shared_memory_analog_img,
@@ -601,7 +614,7 @@ class MoenchZmqServer(Device):
 
     def _empty_shared_array(self, shared_value):
         array = np.ndarray((400, 400), dtype=float, buffer=shared_value.buf)
-        array.fill(0)
+        array[:] = np.zeros_like(array)
 
     @command
     def start_receiver(self):
@@ -611,6 +624,10 @@ class MoenchZmqServer(Device):
             self._empty_shared_array(self.shared_memory_pedestal)
         self.write_processed_frames(0)
         self.write_received_frames(0)
+        self.max_frame_index.value = 0
+
+        self._empty_shared_array(self.shared_memory_single_frames)
+        self._empty_shared_array(self.shared_memory_single_frames)
         self._empty_shared_array(self.shared_memory_analog_img)
         self._empty_shared_array(self.shared_memory_analog_img_pumped)
         self._empty_shared_array(self.shared_memory_threshold_img)
@@ -649,7 +666,7 @@ class MoenchZmqServer(Device):
 
     @command
     def reset_pedestal(self):
-        empty = np.zeros([400,400], dtype=float)
+        empty = np.zeros([400, 400], dtype=float)
         self.write_pedestal(empty)
 
     def get_max_file_index(self, filepath, filename):
@@ -715,6 +732,8 @@ class MoenchZmqServer(Device):
         self.shared_amount_frames = self._manager.Value("I", 0)
         self.shared_split_pump = self._manager.Value("b", 0)
 
+        self.max_frame_index = self._manager.Value("I", 0)
+
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros([400, 400], dtype=float).nbytes
         # allocating 4 arrays of this type
@@ -738,6 +757,12 @@ class MoenchZmqServer(Device):
         )
         self.shared_memory_counting_img_pumped = (
             self._shared_memory_manager.SharedMemory(size=img_bytes)
+        )
+
+        buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
+
+        self.shared_memory_single_frames = self._shared_memory_manager.SharedMemory(
+            size=buffer_bytes
         )
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
@@ -816,6 +841,13 @@ class MoenchZmqServer(Device):
                     full_path_pumped += f"_{time_str}"
                 im_pumped.save(f"{full_path_pumped}.tiff")
 
+        single_frames = np.ndarray(
+            (10000, 400, 400),
+            dtype=np.uint16,
+            buffer=self.shared_memory_single_frames.buf,
+        )
+        single_frames_shorten = single_frames[: self.max_frame_index.value]
+        np.save(f"{savepath}_{index}", single_frames_shorten)
         # if self.read_save_counting_img():
         #     im = Image.fromarray(self.read_analog_img())
         #     im.save(
@@ -837,6 +869,8 @@ class MoenchZmqServer(Device):
 
 
 def wrap_function(
+    buffer_shared_memory,
+    max_file_index,
     use_modes,
     header,
     payload,
@@ -858,18 +892,31 @@ def wrap_function(
     #     shared_memory_pedestal,
     # ]
     frame_index = header.get("frameIndex")
-    
+
     process_pedestal, process_analog, process_threshold, process_counting = use_modes
 
     analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
-    analog_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[1].buf)
+    analog_img_pumped = np.ndarray(
+        (400, 400), dtype=float, buffer=shared_memories[1].buf
+    )
     threshold_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[2].buf)
-    threshold_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[3].buf)
+    threshold_img_pumped = np.ndarray(
+        (400, 400), dtype=float, buffer=shared_memories[3].buf
+    )
     counting_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[4].buf)
-    counting_img_pumped = np.ndarray((400, 400), dtype=float, buffer=shared_memories[5].buf)
+    counting_img_pumped = np.ndarray(
+        (400, 400), dtype=float, buffer=shared_memories[5].buf
+    )
     pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[6].buf)
 
+    single_frame_buffer = np.ndarray(
+        (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
+    )
+
     lock.acquire()
+    max_file_index.value = np.max(max_file_index.value, frame_index)
+    single_frame_buffer[frame_index] = payload
+    payload = payload.astype(float)
     print(f"Enter processing frame {frame_index}")
 
     if process_pedestal:
@@ -900,7 +947,7 @@ def wrap_function(
                 threshold_img += thresholded
         if process_counting:
             payload -= pedestal
-            clustered =  payload > counting_threshold.value
+            clustered = payload > counting_threshold.value
             if split_pump:
                 if frame_index % 2 == 0:
                     counting_img += clustered
