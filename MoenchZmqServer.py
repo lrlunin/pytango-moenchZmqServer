@@ -61,6 +61,8 @@ class MoenchZmqServer(Device):
     shared_memory_counting_img = None
     shared_memory_counting_img_pumped = None
 
+    shared_memory_raw_img = None
+
     shared_memory_single_frames = None
     max_frame_index = None
 
@@ -211,6 +213,16 @@ class MoenchZmqServer(Device):
         max_dim_y=400,
         access=AttrWriteType.READ,
         doc='sum of "analog images" (with subtracted pedestal) processed with counting algorithm',
+    )
+    raw_img = attribute(
+        display_level=DispLevel.EXPERT,
+        label="raw img",
+        dtype=float,
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ,
+        doc="sum of all frames without pedestal subtraction",
     )
 
     threshold = attribute(
@@ -438,6 +450,14 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_counting_img_pumped, flip=self.FLIP_IMAGE
         )
 
+    def write_raw_img(self, value):
+        self._write_shared_array(shared_memory=self.shared_memory_raw_img, value=value)
+
+    def read_raw_img(self):
+        return self._read_shared_array(
+            shared_memory=self.shared_memory_raw_img, flip=self.FLIP_IMAGE
+        )
+
     def write_threshold(self, value):
         # with self.shared_threshold.get_lock():
         self.shared_threshold.value = value
@@ -564,6 +584,7 @@ class MoenchZmqServer(Device):
                         self.shared_memory_counting_img,
                         self.shared_memory_counting_img_pumped,
                         self.shared_memory_pedestal,
+                        self.shared_memory_raw_img,
                     ],  # need to changed corresponding to the frame_func
                     self.shared_processed_frames,
                     self.shared_threshold,
@@ -635,6 +656,7 @@ class MoenchZmqServer(Device):
         self._empty_shared_array(self.shared_memory_threshold_img_pumped)
         self._empty_shared_array(self.shared_memory_counting_img)
         self._empty_shared_array(self.shared_memory_counting_img_pumped)
+        self._empty_shared_array(self.shared_memory_raw_img)
         self.write_receive_frames(True)
         self.set_state(DevState.RUNNING)
 
@@ -644,7 +666,10 @@ class MoenchZmqServer(Device):
 
     def block_stop_receiver(self, received_frames_at_the_time):
         self.write_receive_frames(False)
-        while self.shared_processed_frames.value < received_frames_at_the_time and not self._abort_await:
+        while (
+            self.shared_processed_frames.value < received_frames_at_the_time
+            and not self._abort_await
+        ):
             print(f"abort wait: {self._abort_await}")
             time.sleep(0.5)
         # averaging pedetal which we have accumulated
@@ -766,6 +791,10 @@ class MoenchZmqServer(Device):
             self._shared_memory_manager.SharedMemory(size=img_bytes)
         )
 
+        self.shared_memory_raw_img = self._shared_memory_manager.SharedMemory(
+            size=img_bytes
+        )
+
         buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
 
         self.shared_memory_single_frames = self._shared_memory_manager.SharedMemory(
@@ -803,6 +832,7 @@ class MoenchZmqServer(Device):
         self.push_change_event(
             "counting_img_pumped", self.read_counting_img_pumped(), 400, 400
         )
+        self.push_change_event("raw_img", self.read_raw_img(), 400, 400)
 
     # save files on disk for pictures buffers
     def save_files(self):
@@ -916,6 +946,8 @@ def wrap_function(
     )
     pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[6].buf)
 
+    raw = np.ndarray((400, 400), dtype=float, buffer=shared_memories[7].buf)
+
     single_frame_buffer = np.ndarray(
         (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
     )
@@ -926,6 +958,7 @@ def wrap_function(
     payload = payload.astype(float)
     print(f"Enter processing frame {frame_index}")
 
+    raw += payload
     if process_pedestal:
         # just summing up because amount of successfully received frames is unknown
         # they will be averaged in stop_server post hook
