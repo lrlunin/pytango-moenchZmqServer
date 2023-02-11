@@ -592,14 +592,12 @@ class MoenchZmqServer(Device):
                     self.shared_threshold,
                     self.shared_counting_threshold,
                     self.read_split_pump(),
-                    self.reorder_table,
                 )
                 future = asyncio.wrap_future(future)
 
     async def get_msg_pair(self):
         isNextPacketData = True
         header = None
-        payload = None
         packet1 = await self._socket.recv()
         try:
             print("parsing header...")
@@ -614,7 +612,11 @@ class MoenchZmqServer(Device):
             print("parsing data...")
             packet2 = await self._socket.recv()
             # payload = np.zeros([400, 400], dtype=np.uint16)
-            payload = np.frombuffer(packet2, dtype=np.uint16)
+            raw_buffer = np.frombuffer(packet2, dtype=np.uint16)
+            try:
+                payload = raw_buffer[self.reorder_table]
+            except:
+                payload = None
         return header, payload
 
     def _read_shared_array(self, shared_memory, flip: bool):
@@ -917,7 +919,6 @@ def wrap_function(
     threshold,
     counting_threshold,
     split_pump,
-    reorder_table,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -952,7 +953,6 @@ def wrap_function(
     single_frame_buffer = np.ndarray(
         (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
     )
-    payload = payload[reorder_table]
     lock.acquire()
     max_file_index.value = max(max_file_index.value, frame_index)
     single_frame_buffer[frame_index] = payload
