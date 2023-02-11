@@ -886,7 +886,10 @@ class MoenchZmqServer(Device):
             buffer=self.shared_memory_single_frames.buf,
         )
         single_frames_shorten = single_frames[: self.max_frame_index.value]
-        np.save(f"{savepath}_{index}", single_frames_shorten)
+        single_frames_filename = f"{savepath}_{index}"
+        if path.isfile(f"{single_frames_filename}.npy"):
+            single_frames_filename += f"_{time_str}"
+        np.save(f"{single_frames_filename}.npy", single_frames_shorten)
         # if self.read_save_counting_img():
         #     im = Image.fromarray(self.read_analog_img())
         #     im.save(
