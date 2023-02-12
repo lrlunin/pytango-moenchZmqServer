@@ -7,7 +7,7 @@ This device connects to MOENCH detector and allows to control the state of the d
 ## Getting Started
 
 ### Dependencies
-* `python >=3.8`
+* `python >=3.10`
 * `pytango >=9`
 * `pyzmq`
 
