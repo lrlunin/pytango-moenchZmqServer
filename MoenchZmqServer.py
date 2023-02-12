@@ -598,6 +598,7 @@ class MoenchZmqServer(Device):
     async def get_msg_pair(self):
         isNextPacketData = True
         header = None
+        payload = None
         packet1 = await self._socket.recv()
         try:
             print("parsing header...")
@@ -611,12 +612,12 @@ class MoenchZmqServer(Device):
         if isNextPacketData:
             print("parsing data...")
             packet2 = await self._socket.recv()
-            # payload = np.zeros([400, 400], dtype=np.uint16)
             raw_buffer = np.frombuffer(packet2, dtype=np.uint16)
             try:
                 payload = raw_buffer[self.reorder_table]
             except:
-                payload = None
+                frameIndex = header.get("frameIndex")
+                print(f"Reorder of frame {frameIndex} failed. Ignored...")
         return header, payload
 
     def _read_shared_array(self, shared_memory, flip: bool):
@@ -852,33 +853,43 @@ class MoenchZmqServer(Device):
         # need to be refactored soon
         savepath = path.join(filepath, filename)
         time_str = datetime.now().strftime("%H:%M:%S")
-        if self.read_save_analog_img():
-            im = Image.fromarray(self.read_analog_img())
-            full_path_unpumped = f"{savepath}_{index}_analog"
 
-            if path.isfile(f"{full_path_unpumped}.tiff"):
-                full_path_unpumped += f"_{time_str}"
-            im.save(f"{full_path_unpumped}.tiff")
-            if self.read_split_pump():
-                im_pumped = Image.fromarray(self.read_analog_img_pumped())
-                full_path_pumped = f"{savepath}_{index}_analog_pumped"
-                if path.isfile(f"{full_path_pumped}.tiff"):
-                    full_path_pumped += f"_{time_str}"
-                im_pumped.save(f"{full_path_pumped}.tiff")
+        if self.read_process_pedestal_img():
+            im = Image.fromarray(self.read_pedestal())
+            full_path_pedestal = f"{savepath}_{index}_pedestal"
+            if path.isfile(f"{full_path_pedestal}.tiff"):
+                full_path_pedestal += f"_{time_str}"
+            im.save(f"{full_path_pedestal}.tiff")
+        else:
+            if self.read_process_analog_img() and self.read_save_analog_img():
+                im = Image.fromarray(self.read_analog_img())
+                full_path_unpumped = f"{savepath}_{index}_analog"
 
-        if self.read_save_threshold_img():
-            threshold = self.read_threshold()
-            im = Image.fromarray(self.read_threshold_img())
-            full_path_unpumped = f"{savepath}_{index}_threshold_{threshold}"
-            if path.isfile(f"{full_path_unpumped}.tiff"):
-                full_path_unpumped += f"_{time_str}"
-            im.save(f"{full_path_unpumped}.tiff")
-            if self.read_split_pump():
-                im_pumped = Image.fromarray(self.read_threshold_img_pumped())
-                full_path_pumped = f"{savepath}_{index}_threshold_{threshold}_pumped"
-                if path.isfile(f"{full_path_pumped}.tiff"):
-                    full_path_pumped += f"_{time_str}"
-                im_pumped.save(f"{full_path_pumped}.tiff")
+                if path.isfile(f"{full_path_unpumped}.tiff"):
+                    full_path_unpumped += f"_{time_str}"
+                im.save(f"{full_path_unpumped}.tiff")
+                if self.read_split_pump():
+                    im_pumped = Image.fromarray(self.read_analog_img_pumped())
+                    full_path_pumped = f"{savepath}_{index}_analog_pumped"
+                    if path.isfile(f"{full_path_pumped}.tiff"):
+                        full_path_pumped += f"_{time_str}"
+                    im_pumped.save(f"{full_path_pumped}.tiff")
+
+            if self.read_process_threshold_img() and self.read_save_threshold_img():
+                threshold = self.read_threshold()
+                im = Image.fromarray(self.read_threshold_img())
+                full_path_unpumped = f"{savepath}_{index}_threshold_{threshold}"
+                if path.isfile(f"{full_path_unpumped}.tiff"):
+                    full_path_unpumped += f"_{time_str}"
+                im.save(f"{full_path_unpumped}.tiff")
+                if self.read_split_pump():
+                    im_pumped = Image.fromarray(self.read_threshold_img_pumped())
+                    full_path_pumped = (
+                        f"{savepath}_{index}_threshold_{threshold}_pumped"
+                    )
+                    if path.isfile(f"{full_path_pumped}.tiff"):
+                        full_path_pumped += f"_{time_str}"
+                    im_pumped.save(f"{full_path_pumped}.tiff")
 
         single_frames = np.ndarray(
             (10000, 400, 400),
