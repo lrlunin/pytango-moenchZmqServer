@@ -914,6 +914,8 @@ class MoenchZmqServer(Device):
         print(f"Connecting to: {endpoint}")
         self._socket.connect(endpoint)
         self._socket.setsockopt(zmq.SUBSCRIBE, b"")
+        hwm = self._socket.get_hwm()
+        print(f"HWM of the socket = {hwm}")
 
     def delete_device(self):
         self._process_pool.shutdown()
