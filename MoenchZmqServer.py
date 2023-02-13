@@ -678,9 +678,14 @@ class MoenchZmqServer(Device):
         # averaging pedetal which we have accumulated
         self._abort_await = False
         if self.read_process_pedestal_img():
-            pedestal_not_averaged = self.read_pedestal()
-            averaged_pedestal = pedestal_not_averaged / received_frames_at_the_time
-            self.write_pedestal(averaged_pedestal)
+            single_frames = np.ndarray(
+                (10000, 400, 400),
+                dtype=np.uint16,
+                buffer=self.shared_memory_single_frames.buf,
+            )
+            single_frames_shorten = single_frames[: self.max_frame_index.value]
+            print(f"averaging {self.max_frame_index.value} pedestals")
+            self.write_pedestal(np.average(single_frames_shorten, axis=0))
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_files()
@@ -949,6 +954,7 @@ def wrap_function(
     frame_index = header.get("frameIndex")
 
     process_pedestal, process_analog, process_threshold, process_counting = use_modes
+    print(use_modes)
 
     analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
     analog_img_pumped = np.ndarray(
@@ -972,29 +978,30 @@ def wrap_function(
     lock.acquire()
     max_file_index.value = max(max_file_index.value, frame_index)
     single_frame_buffer[frame_index] = payload
-    payload = payload.astype(float)
+    payload_copy = payload.astype(float, copy=True)
+    no_ped = payload_copy - pedestal
     print(f"Enter processing frame {frame_index}")
 
     raw += payload
     if process_pedestal:
         # just summing up because amount of successfully received frames is unknown
         # they will be averaged in stop_server post hook
-        pedestal += payload
+        pedestal += payload_copy
     else:
         if process_analog:
             print("Processing analog...")
-            payload -= pedestal
+            print(f"Pedestal shape {pedestal.shape}")
             if split_pump:
                 if frame_index % 2 == 0:
-                    analog_img += payload
+                    analog_img += no_ped
                 else:
-                    analog_img_pumped += payload
+                    analog_img_pumped += no_ped
             else:
-                analog_img += payload
+                analog_img += no_ped
         if process_threshold:
             print("Processing threshold...")
-            payload -= pedestal
-            thresholded = payload > threshold.value
+            thresholded = no_ped > threshold.value
+            print(f"th = {threshold.value}")
             if split_pump:
                 if frame_index % 2 == 0:
                     threshold_img += thresholded
@@ -1003,8 +1010,7 @@ def wrap_function(
             else:
                 threshold_img += thresholded
         if process_counting:
-            payload -= pedestal
-            clustered = payload > counting_threshold.value
+            clustered = no_ped > counting_threshold.value
             if split_pump:
                 if frame_index % 2 == 0:
                     counting_img += clustered
