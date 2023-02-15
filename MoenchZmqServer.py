@@ -119,6 +119,11 @@ class MoenchZmqServer(Device):
     SINGLE_FRAME_BUFFER_SIZE = device_property(
         dtype=int, doc="how much single frames can be stored", default_value=10000
     )
+    TANGO_DEVICE_FOLDER_PATH = device_property(
+        dtype=str,
+        doc="folder to save in",
+        default_value="/home/moench/tango_servers/pytango-moenchZmqServer",
+    )
 
     filename = attribute(
         label="filename",
@@ -734,8 +739,10 @@ class MoenchZmqServer(Device):
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
-
-        self.reorder_table = np.load("reorder_table.npy")
+        reorder_table_path = path.join(
+            self.TANGO_DEVICE_FOLDER_PATH, "reorder_table.npy"
+        )
+        self.reorder_table = np.load(reorder_table_path)
         # sync manager for synchronization between threads
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
@@ -815,27 +822,54 @@ class MoenchZmqServer(Device):
 
         # assigning the previews for the images (just for fun)
         self._write_shared_array(
-            self.shared_memory_analog_img, np.load("default_images/analog_unpumped.npy")
+            self.shared_memory_analog_img,
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/analog_unpumped.npy"
+                )
+            ),
         )
         self._write_shared_array(
             self.shared_memory_analog_img_pumped,
-            np.load("default_images/analog_pumped.npy"),
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/analog_pumped.npy"
+                )
+            ),
         )
         self._write_shared_array(
             self.shared_memory_threshold_img,
-            np.load("default_images/threshold_unpumped.npy"),
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH,
+                    "default_images/threshold_unpumped.npy",
+                )
+            ),
         )
         self._write_shared_array(
             self.shared_memory_threshold_img_pumped,
-            np.load("default_images/threshold_pumped.npy"),
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/threshold_pumped.npy"
+                )
+            ),
         )
         self._write_shared_array(
             self.shared_memory_counting_img,
-            np.load("default_images/counting_unpumped.npy"),
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH,
+                    "default_images/counting_unpumped.npy",
+                )
+            ),
         )
         self._write_shared_array(
             self.shared_memory_counting_img_pumped,
-            np.load("default_images/counting_pumped.npy"),
+            np.load(
+                path.join(
+                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/counting_pumped.npy"
+                )
+            ),
         )
 
         # initialization of tango events for pictures buffers
