@@ -678,14 +678,11 @@ class MoenchZmqServer(Device):
         # averaging pedetal which we have accumulated
         self._abort_await = False
         if self.read_process_pedestal_img():
-            single_frames = np.ndarray(
-                (10000, 400, 400),
-                dtype=np.uint16,
-                buffer=self.shared_memory_single_frames.buf,
+            non_averaged_pedestal = self._read_shared_array(
+                self.shared_memory_pedestal, flip=False
             )
-            single_frames_shorten = single_frames[: self.max_frame_index.value]
-            print(f"averaging {self.max_frame_index.value} pedestals")
-            self.write_pedestal(np.average(single_frames_shorten, axis=0))
+            averaged_pedesal = non_averaged_pedestal / received_frames_at_the_time
+            self.write_pedestal(averaged_pedesal)
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_files()
@@ -926,7 +923,7 @@ class MoenchZmqServer(Device):
             dtype=np.uint16,
             buffer=self.shared_memory_single_frames.buf,
         )
-        single_frames_shorten = single_frames[: self.max_frame_index.value]
+        single_frames_shorten = single_frames[: self.max_frame_index.value + 1]
         single_frames_filename = f"{savepath}_{index}"
         if path.isfile(f"{single_frames_filename}.npy"):
             single_frames_filename += f"_{time_str}"
@@ -1015,7 +1012,6 @@ def wrap_function(
     else:
         if process_analog:
             print("Processing analog...")
-            print(f"Pedestal shape {pedestal.shape}")
             if split_pump:
                 if frame_index % 2 == 0:
                     analog_img += no_ped
