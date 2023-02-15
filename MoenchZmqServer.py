@@ -816,6 +816,31 @@ class MoenchZmqServer(Device):
         loop = asyncio.get_event_loop()
         loop.create_task(self.main())
 
+        # assigning the previews for the images (just for fun)
+        self._write_shared_array(
+            self.shared_memory_analog_img, np.load("default_images/analog_unpumped.npy")
+        )
+        self._write_shared_array(
+            self.shared_memory_analog_img_pumped,
+            np.load("default_images/analog_pumped.npy"),
+        )
+        self._write_shared_array(
+            self.shared_memory_threshold_img,
+            np.load("default_images/threshold_unpumped.npy"),
+        )
+        self._write_shared_array(
+            self.shared_memory_threshold_img_pumped,
+            np.load("default_images/threshold_pumped.npy"),
+        )
+        self._write_shared_array(
+            self.shared_memory_counting_img,
+            np.load("default_images/counting_unpumped.npy"),
+        )
+        self._write_shared_array(
+            self.shared_memory_counting_img_pumped,
+            np.load("default_images/counting_pumped.npy"),
+        )
+
         # initialization of tango events for pictures buffers
         self.set_change_event("analog_img", True, False)
         self.set_change_event("threshold_img", True, False)
