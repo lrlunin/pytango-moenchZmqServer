@@ -21,9 +21,12 @@ jobs:
         run: mkdir -p ~/.local/share/fonts && cp -r fonts/ttf/* ~/.local/share/fonts/
       - name: Build font information caches
         run: fc-cache -rv
-      - name: changing directory to the main repo
+      - name: ls current folder
         run: |
-          cd ./main_repo
+          ls
+      - name: cd to this repository folder
+        run: |
+           cd main_repo
       - name: install python packages
         run: |
           python -m pip install --upgrade pip
