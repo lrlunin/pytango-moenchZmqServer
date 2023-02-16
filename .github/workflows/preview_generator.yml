@@ -27,11 +27,11 @@ jobs:
           pip install -r ./preview_generator/requirements.txt
       - name: execute python script
         run: |
-          python ./preview_generator/build_previews_from_svg.py ${GITHUB_SHA::6}
+          python ./preview_generator/build_previews_from_svg.py ${{ github.sha }}
       - name: commit updated previews
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "updated previews"
+          git commit -m "updated previews for $GITHUB_SHA"
           git push
