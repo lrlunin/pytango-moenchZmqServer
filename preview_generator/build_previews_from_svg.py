@@ -19,6 +19,11 @@ commit_hash = sys.argv[1].upper()
 
 
 template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").read()
+print(f"commit long SHA: {commit_hash}")
+
+commit_hash = commit_hash[:7]
+print(f"commit short SHA: {commit_hash}")
+
 
 for mode in modes:
     for pump_state in pump_states:
