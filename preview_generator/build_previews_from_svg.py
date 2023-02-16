@@ -6,6 +6,8 @@ import sys
 from cairosvg import svg2png
 import io
 
+dir = path.dirname(__file__)
+
 time = datetime.now()
 save_folder = "default_images"
 modes = ["ANALOG", "THRESHOLD", "COUNTING"]
@@ -16,7 +18,7 @@ today_formatted = time.strftime("%d/%m/%Y")
 commit_hash = sys.argv[1].upper()
 
 
-template = open("preview_template.svg", "r", encoding="utf-8").read()
+template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").read()
 
 for mode in modes:
     for pump_state in pump_states:
