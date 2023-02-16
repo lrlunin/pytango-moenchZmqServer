@@ -23,10 +23,10 @@ jobs:
         run: fc-cache -rv
       - name: ls current folder
         run: |
-          ls ${GITHUB_WORKSPACE}
+          ls ${{ github.workspace }}
       - name: cd to this repository folder
         run: |
-           cd ${GITHUB_WORKSPACE}/main_repo
+           cd ${{ github.workspace }}/main_repo
       - name: install python packages
         run: |
           python -m pip install --upgrade pip
