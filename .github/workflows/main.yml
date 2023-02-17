@@ -1,0 +1,34 @@
+name: create version tag
+on:
+  push:
+    branches: master
+jobs:
+  upd-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v3 # checkout the repository content to github runner.
+        with:
+          fetch-depth: 0
+      - name: get VERSION
+        run: |
+          echo "COMMIT_VERSION=v$(head -n 1 VERSION)" >> $GITHUB_ENV
+      - name: check variable
+        run: echo "COMMIT_VERSION = ${{ env.COMMIT_VERSION }}"
+      - name: get latest tag
+        id: previoustag 
+        uses: WyriHaximus/github-action-get-previous-tag@v1
+        with:
+          fallback: v0.0.0
+      - name: compare versions
+        run: |
+             echo ${{ steps.previoustag.outputs.tag }}
+             echo ${{ env.COMMIT_VERSION }}
+             echo ${{ steps.previoustag.outputs.tag != env.COMMIT_VERSION }}
+      - name: create newer tag
+        uses: rickstaa/action-create-tag@v1.5.4
+        with:
+          tag:  ${{ env.COMMIT_VERSION }}
+          message: "updated to new version ${{ env.COMMIT_VERSION }}"
+        if: ${{ steps.previoustag.outputs.tag != env.COMMIT_VERSION }} # version is updated => new working tag
