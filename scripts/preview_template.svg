@@ -26,11 +26,11 @@
      inkscape:document-units="mm"
      showgrid="true"
      inkscape:zoom="1.4142136"
-     inkscape:cx="204.70741"
-     inkscape:cy="225.21351"
+     inkscape:cx="194.45436"
+     inkscape:cy="225.92061"
      inkscape:window-width="1438"
      inkscape:window-height="808"
-     inkscape:window-x="2553"
+     inkscape:window-x="2560"
      inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
@@ -40,8 +40,8 @@
        id="grid5432" /></sodipodi:namedview><defs
      id="defs9"><color-profile
        name="Black---White"
-       xlink:href="../../../../../Windows/system32/spool/drivers/color/BlackWhite.icc"
-       id="color-profile3057" /></defs><g
+       xlink:href="file:///Windows/system32/spool/drivers/color/BlackWhite.icc"
+       id="color-profile1667" /></defs><g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"><rect
@@ -92,7 +92,7 @@
          style="stroke-width:0.264583"
          x="2.3274825"
          y="44.883671"
-         id="tspan6912">BUILD COMMIT {commit_hash}</tspan></text><text
+         id="tspan6912">BUILD TAG: v{version}</tspan></text><text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.23333px;font-family:'Roboto Mono';-inkscape-font-specification:'Roboto Mono';text-align:start;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke-width:0.264583"
        x="3.7041667"
@@ -137,7 +137,7 @@
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Roboto Mono';-inkscape-font-specification:'Roboto Mono';stroke-width:0.264583"
          x="2.4306626"
          y="102.34966"
-         id="tspan6957">Max Born Institute</tspan><tspan
+         id="tspan6957">All rights reserved.</tspan><tspan
          sodipodi:role="line"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Roboto Mono';-inkscape-font-specification:'Roboto Mono';stroke-width:0.264583"
          x="2.4306626"

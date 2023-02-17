@@ -15,21 +15,15 @@ pump_states = ["PUMPED", "UNPUMPED"]
 
 
 today_formatted = time.strftime("%d/%m/%Y")
-commit_hash = sys.argv[1].upper()
-
+version = open("VERSION", encoding="utf-8").read()
 
 template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").read()
-print(f"commit long SHA: {commit_hash}")
-
-commit_hash = commit_hash[:7]
-print(f"commit short SHA: {commit_hash}")
-
 
 for mode in modes:
     for pump_state in pump_states:
         svg_formatted = template.format(
             date=today_formatted,
-            commit_hash=commit_hash,
+            version=version,
             processing_mode=mode,
             pump_state=pump_state,
         )

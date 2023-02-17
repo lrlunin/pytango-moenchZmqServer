@@ -15,6 +15,7 @@ nav:
     - Installation: installation.md
     - Coding guideline: guideline.md
     - Detector reference: detector.md
+    - slsDetectorGroup reference: original_software.md
     - Code reference: reference.md
 
 markdown_extensions:
