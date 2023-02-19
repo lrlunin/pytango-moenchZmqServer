@@ -1,0 +1,26 @@
+{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+
+package:
+  name: moenchzmqtangods
+  version: {{ data.get('version') }}
+
+source:
+  path: ../
+build:
+  noarch: python
+  entry_points:
+    - MoenchZmqServer = moenchzmqtangods:main
+  script: "{{ PYTHON }} -m pip install . -vv"
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python>=3.10
+    - pytango>=9.3.6
+    - numpy>=1.24.1
+    - pyzmq>=23.2.0
+    - pillow>=9.3.0
+
+about:
+  home: https://github.com/lrlunin/pytango-moenchZmqServer
