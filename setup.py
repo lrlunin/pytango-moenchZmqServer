@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 version = open("VERSION", encoding="utf-8").read()
 
@@ -11,9 +12,15 @@ setup(
     python_requires=">=3.10",
     entry_points={"console_scripts": ["MoenchZmqServer = moenchzmqtangods:main"]},
     license="MIT",
+    packages=["moenchzmqtangods"],
+    package_data={"moenchzmqtangods": ["VERSION"]},
     data_files=[
-        ("default_images", ["default_images/*.npy"]),
-        ("reorder_tables", ["reorder_tables/*.npy"]),
+        (
+            "default_images",
+            glob("default_images/*.npy"),
+        ),
+        ("reorder_tables", glob("reorder_tables/*.npy")),
+        ("", ["VERSION"]),
     ],
     url="https://github.com/lrlunin/pytango-moenchZmqServer",
     keywords=[
