@@ -13,5 +13,5 @@ def main():
     import sys
     import tango.server
 
-    args = ["Serial"] + sys.argv[1:]
+    args = ["MoenchZmqServer"] + sys.argv[1:]
     tango.server.run((MoenchZmqServer,), args=args)
