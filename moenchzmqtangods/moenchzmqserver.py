@@ -12,7 +12,6 @@ import sys
 import re
 import numpy as np
 from enum import IntEnum
-import tango
 import zmq
 import zmq.asyncio
 from PIL import Image
@@ -115,11 +114,6 @@ class MoenchZmqServer(Device):
     )
     SINGLE_FRAME_BUFFER_SIZE = device_property(
         dtype=int, doc="how much single frames can be stored", default_value=10000
-    )
-    TANGO_DEVICE_FOLDER_PATH = device_property(
-        dtype=str,
-        doc="folder to save in",
-        default_value="/home/moench/tango_servers/pytango-moenchZmqServer",
     )
 
     filename = attribute(
