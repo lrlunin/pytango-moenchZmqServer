@@ -10,7 +10,7 @@ build:
   noarch: python
   entry_points:
     - MoenchZmqServer = moenchzmqtangods:main
-  script: "{{ PYTHON }} -m pip install . -vv"
+  script: "{{ PYTHON }} -m pip install . -vv --no-deps"
   number: 0
 requirements:
   build:
