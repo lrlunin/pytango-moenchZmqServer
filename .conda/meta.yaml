@@ -11,6 +11,7 @@ build:
   entry_points:
     - MoenchZmqServer = moenchzmqtangods:main
   script: "{{ PYTHON }} -m pip install . -vv"
+  number: 0
 requirements:
   build:
     - python
@@ -24,3 +25,9 @@ requirements:
 
 about:
   home: https://github.com/lrlunin/pytango-moenchZmqServer
+  license: MIT
+  summary: "online processing for PSI moench detector"
+  description: processing ZMQ server for a moench detector with tango DeviceServer
+  dev_url: https://github.com/lrlunin/pytango-moenchZmqServer
+  doc_url: https://lrlunin.github.io/pytango-moenchZmqServer
+  doc_source_url: https://github.com/lrlunin/pytango-moenchZmqServer/tree/master/docs
