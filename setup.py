@@ -4,16 +4,16 @@ from glob import glob
 version = open("VERSION", encoding="utf-8").read()
 
 setup(
-    name="moenchzmqtangods",
+    name="tangods_moenchzmq",
     version=version,
     description="processing ZMQ server for a moench detector with tango DeviceServer",
     author="Leonid Lunin",
     author_email="lunin.leonid@gmail.com",
     python_requires=">=3.10",
-    entry_points={"console_scripts": ["MoenchZmqServer = moenchzmqtangods:main"]},
+    entry_points={"console_scripts": ["MoenchZmqServer = tangods_moenchzmq:main"]},
     license="MIT",
-    packages=["moenchzmqtangods"],
-    package_data={"moenchzmqtangods": ["VERSION"]},
+    packages=["tangods_moenchzmq"],
+    package_data={"tangods_moenchzmq": ["VERSION"]},
     data_files=[
         (
             "default_images",
