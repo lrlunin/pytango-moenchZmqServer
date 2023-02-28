@@ -2,4 +2,18 @@ __pycache__/
 .DS_Store
 .vscode
 site/
-MoenchZmqServer
+
+# Distribution / packaging
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg

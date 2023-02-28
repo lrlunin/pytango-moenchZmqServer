@@ -1,7 +1,4 @@
-#!/home/moench/miniconda3/envs/pytango310/bin/python
-
 import asyncio
-import ctypes as cp
 import json
 import multiprocessing as mp
 from os import path, makedirs, listdir
@@ -10,8 +7,8 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
-import processing_functions
 
+import sys
 import re
 import numpy as np
 from enum import IntEnum
@@ -739,10 +736,8 @@ class MoenchZmqServer(Device):
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
-        reorder_table_path = path.join(
-            self.TANGO_DEVICE_FOLDER_PATH, "reorder_table.npy"
-        )
-        self.reorder_table = np.load(reorder_table_path)
+        prefix = sys.prefix
+        self.reorder_table = np.load(path.join(prefix, "reorder_tables/moench03.npy"))
         # sync manager for synchronization between threads
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
@@ -821,55 +816,40 @@ class MoenchZmqServer(Device):
         loop.create_task(self.main())
 
         # assigning the previews for the images (just for fun)
+
         self._write_shared_array(
             self.shared_memory_analog_img,
-            np.load(
-                path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/analog_unpumped.npy"
-                )
-            ),
+            np.load(path.join(prefix, "default_images/analog_unpumped.npy")),
         )
         self._write_shared_array(
             self.shared_memory_analog_img_pumped,
-            np.load(
-                path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/analog_pumped.npy"
-                )
-            ),
+            np.load(path.join(prefix, "default_images/analog_pumped.npy")),
         )
         self._write_shared_array(
             self.shared_memory_threshold_img,
             np.load(
                 path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH,
+                    prefix,
                     "default_images/threshold_unpumped.npy",
                 )
             ),
         )
         self._write_shared_array(
             self.shared_memory_threshold_img_pumped,
-            np.load(
-                path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/threshold_pumped.npy"
-                )
-            ),
+            np.load(path.join(prefix, "default_images/threshold_pumped.npy")),
         )
         self._write_shared_array(
             self.shared_memory_counting_img,
             np.load(
                 path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH,
+                    prefix,
                     "default_images/counting_unpumped.npy",
                 )
             ),
         )
         self._write_shared_array(
             self.shared_memory_counting_img_pumped,
-            np.load(
-                path.join(
-                    self.TANGO_DEVICE_FOLDER_PATH, "default_images/counting_pumped.npy"
-                )
-            ),
+            np.load(path.join(prefix, "default_images/counting_pumped.npy")),
         )
 
         # initialization of tango events for pictures buffers
