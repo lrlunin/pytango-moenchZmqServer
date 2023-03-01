@@ -1,0 +1,37 @@
+name: Python Package using Conda
+
+on:
+  release:
+    types: [published]
+  
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      max-parallel: 5
+
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: setup conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: true
+          activate-environment: ""
+          channels: defaults, conda-forge
+          add-pip-as-python-dependency: true
+          conda-build-version: '3.23.3'
+      - name: running conda commands
+        run: |
+          conda build .conda --output-folder .
+      - name: install anaconda client
+        run: |
+          conda install anaconda-client
+      - name: upload package
+        env:
+           ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_MBI_TOKEN }}
+        run: |
+          anaconda upload --label main noarch/*.tar.bz2 || anaconda upload --label main linux-64/*.tar.bz2
