@@ -5,7 +5,7 @@
 
 ## Description
 
-This device receives ZMQ packets from MOENCH detector and prcoess them.
+This device receives ZMQ packets from MOENCH detector and process them.
 
 ## Installation
 This package is distributed via conda. There are necessary steps before installation:
@@ -29,7 +29,7 @@ Start servers via commands sequence:
 
 You can also give a full path to the executable:
 
-`./home/username/miniconda3/envs/tangods_env/bin/MoenchZmqServer INSTANCE_NAME [-v4]`
+`/home/username/miniconda3/envs/tangods_env/bin/MoenchZmqServer INSTANCE_NAME [-v4]`
 ### with Astor
 There two necessary steps:
 1. Add the following line into `StartDsPath` property of `Starter` tango DS: `/home/username/miniconda3/envs/tangods_env/bin`
