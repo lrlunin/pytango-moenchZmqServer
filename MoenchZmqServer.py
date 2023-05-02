@@ -28,6 +28,9 @@ from tango.server import (
     run,
 )
 
+# temporar fix to save .raw files in compatible mode with old software
+# search insertions with SLS_LEGACY_RAW
+from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
 
 class ProcessingMode(IntEnum):
     ANALOG = 0
@@ -38,7 +41,9 @@ class ProcessingMode(IntEnum):
 
 class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
-
+    # SLS_LEGACY_RAW
+    # creating moench instance to access
+    self.moench_device = Moench()
     processing_function = None
     _processing_function_enum = ProcessingMode(0)
 
@@ -354,6 +359,8 @@ class MoenchZmqServer(Device):
 
     def write_filename(self, value):
         self._filename = value
+        # SLS_LEGACY_RAW
+        self.moench_device.fname = value
 
     def read_filename(self):
         return self._filename
@@ -371,12 +378,16 @@ class MoenchZmqServer(Device):
                     "write_filepath",
                 )
         self._filepath = joined_path
+        # SLS_LEGACY_RAW
+        self.moench_device.fpath = joined_path
 
     def read_filepath(self):
         return self._filepath
 
     def write_file_index(self, value):
         self._file_index = value
+        # SLS_LEGACY_RAW
+        self.moench_device.findex = value
 
     def read_file_index(self):
         return self._file_index
@@ -519,6 +530,13 @@ class MoenchZmqServer(Device):
         return self._split_pump
 
     def write_process_pedestal_img(self, value):
+        # SLS_LEGACY_RAW
+        # if value is written to be true -> set frameMode header as newPedestal
+        # otherwise as frame
+        if value:
+            self.moench_device.rx_jsonpara["frameMode"] = "newPedestal"
+        else:
+            self.moench_device.rx_jsonpara["frameMode"] = "frame"
         self._process_pedestal_img = value
 
     def read_process_pedestal_img(self):
