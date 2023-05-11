@@ -8,8 +8,9 @@ repos:
       - id: previews
         name: update previews
         entry: python scripts/build_previews_from_svg.py
-        language: system
-        # additional_dependencies: [Pillow, numpy, cairosvg]
+        language: conda
+        types: [python]
+        additional_dependencies: ['pillow', 'numpy', 'cairosvg', 'cairo', 'pango', 'gdk-pixbuf', 'libffi']
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
