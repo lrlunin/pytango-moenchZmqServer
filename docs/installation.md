@@ -21,5 +21,3 @@ The following TangoDS properties should be specified:
 | `ZMQ_RX_PORT`      | `String`  | Port where the detector opens ZMQ socket, must match the detector's config                                                                                                                                                                                                     | `"50003"`                                              |
 | `PROCESSING_CORES` | `Integer` | Amount of cores utilized/processes spawned for parallel processing of oncoming images                                                                                                                                                                                          | `20`                                                   |
 | `FLIP_IMAGE`       | `Boolean` | Flip the stored images in the `read_` functions of the TangoDS. Due to the other specification used for detector the oncoming image from the detector is flipped vertically. Please note that the images are stored in unflipped state and will be flipped only while reading. | `true`                                                 |
-
-
