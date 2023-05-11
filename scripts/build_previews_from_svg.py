@@ -21,9 +21,7 @@ version = open("VERSION", encoding="utf-8").read()
 # for the proper work of the preview the Roboto font should be installed on the system
 # https://fonts.google.com/specimen/Roboto
 # otherwise the preview will be generated with the default font
-template = open(
-    path.join(dir, "preview_template.svg"), "r", encoding="utf-8"
-).read()
+template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").read()
 
 for mode in modes:
     for pump_state in pump_states:
