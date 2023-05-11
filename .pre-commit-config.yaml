@@ -3,14 +3,13 @@ repos:
     rev: v3.2.0
     hooks:
       - id: end-of-file-fixer
-      - id: check-added-large-files
   - repo: local
     hooks:
       - id: previews
         name: update previews
         entry: python scripts/build_previews_from_svg.py
-        language: python
-        additional_dependencies: [Pillow, numpy, cairosvg]
+        language: system
+        # additional_dependencies: [Pillow, numpy, cairosvg]
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:

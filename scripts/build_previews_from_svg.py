@@ -17,7 +17,13 @@ pump_states = ["PUMPED", "UNPUMPED"]
 today_formatted = time.strftime("%d/%m/%Y")
 version = open("VERSION", encoding="utf-8").read()
 
-template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").read()
+# since the last update the inlined images in svg are not working anymore
+# for the proper work of the preview the Roboto font should be installed on the system
+# https://fonts.google.com/specimen/Roboto
+# otherwise the preview will be generated with the default font
+template = open(
+    path.join(dir, "preview_template.svg"), "r", encoding="utf-8"
+).read()
 
 for mode in modes:
     for pump_state in pump_states:
@@ -28,7 +34,9 @@ for mode in modes:
             pump_state=pump_state,
         )
         png_bytes = svg2png(
-            bytestring=svg_formatted, output_width=400, output_height=400
+            bytestring=svg_formatted,
+            output_width=400,
+            output_height=400,
         )
         # svg2png(
         #     bytestring=svg_formatted,
