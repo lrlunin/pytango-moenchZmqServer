@@ -1,7 +1,7 @@
 # pytango-moenchZmqServer
-![conda version](https://anaconda.org/mbi-div-b/tangods_moenchzmq/badges/version.svg)
-![last updated](https://anaconda.org/mbi-div-b/tangods_moenchzmq/badges/latest_release_relative_date.svg)
-![platforms](https://anaconda.org/mbi-div-b/tangods_moenchzmq/badges/platforms.svg)
+[![Conda version](https://img.shields.io/conda/v/mbi-div-b/tangods_moenchzmq)](https://anaconda.org/MBI-DIV-B/tangods_moenchzmq)
+![Platforms](https://img.shields.io/conda/pn/mbi-div-b/tangods_moenchzmq)
+![Downloads](https://img.shields.io/conda/dn/mbi-div-b/tangods_moenchzmq)
 
 ## Description
 
