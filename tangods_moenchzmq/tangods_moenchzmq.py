@@ -718,11 +718,11 @@ class MoenchZmqServer(Device):
         else:
             # finding index with regexp while index is a decimal number which stays after "filename_"
             # (\d*) - is an indented group 1
-            r = re.compile(rf"^{filename}_(\d*)")
+            r = re.compile(rf"^{filename}_(\d+)")
             # regex objects which match the upper statement
-            reg = map(r.search, captures_list)
+            reg = filter(lambda item: item is not None, map(r.search, captures_list))
             # getting max from the group 1 <=> index
-            max_index = max(list(map(lambda match: int(match.group(1)), reg)))
+            max_index = max(map(lambda match: int(match.group(1)), reg))
             return max_index
 
     def init_device(self):
