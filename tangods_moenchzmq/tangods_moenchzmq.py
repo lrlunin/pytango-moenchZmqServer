@@ -628,7 +628,7 @@ class MoenchZmqServer(Device):
             return array
 
     def _write_shared_array(self, shared_memory, value):
-        # do not work
+        # do not work test
         # self._lock.acquire()
         array = np.ndarray((400, 400), dtype=float, buffer=shared_memory.buf)
         array[:] = value[:]

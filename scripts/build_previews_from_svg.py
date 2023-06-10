@@ -25,12 +25,10 @@ template = open(path.join(dir, "preview_template.svg"), "r", encoding="utf-8").r
 
 for mode in modes:
     for pump_state in pump_states:
-        svg_formatted = template.format(
-            date=today_formatted,
-            version=version,
-            processing_mode=mode,
-            pump_state=pump_state,
-        )
+        svg_formatted = template.replace("$DATE$", today_formatted)
+        svg_formatted = svg_formatted.replace("$VERSION$", version)
+        svg_formatted = svg_formatted.replace("$PROCESSING_MODE$", mode)
+        svg_formatted = svg_formatted.replace("$PUMP_STATE$", pump_state)
         png_bytes = svg2png(
             bytestring=svg_formatted,
             output_width=400,
