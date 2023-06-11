@@ -42,6 +42,16 @@ class MoenchZmqServer(Device):
     _context = None
     _socket = None
     _process_pool = None
+    _IMG_ATTR = [
+        "pedestal",
+        "analog_img",
+        "analog_img_pumped",
+        "threshold_img",
+        "threshold_img_pumped",
+        "counting_img",
+        "counting_img_pumped",
+        "raw_img",
+    ]
     green_mode = GreenMode.Asyncio
 
     # probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing
@@ -114,6 +124,11 @@ class MoenchZmqServer(Device):
     )
     SINGLE_FRAME_BUFFER_SIZE = device_property(
         dtype=int, doc="how much single frames can be stored", default_value=10000
+    )
+    PEDESTAL_FRAME_BUFFER_SIZE = device_property(
+        dtype=int,
+        doc="length of buffer for pedestal moving average",
+        default_value=5000,
     )
 
     filename = attribute(
@@ -379,79 +394,83 @@ class MoenchZmqServer(Device):
         return self.read_file_index() - 1
 
     def write_pedestal(self, value):
-        self._write_shared_array(shared_memory=self.shared_memory_pedestal, value=value)
+        self._write_shared_array(
+            shared_memory=self.shared_memory_buffers[0], value=value
+        )
 
     def read_pedestal(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_pedestal, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[0], flip=self.FLIP_IMAGE
         )
 
     def write_analog_img(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_analog_img, value=value
+            shared_memory=self.shared_memory_buffers[1], value=value
         )
 
     def read_analog_img(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_analog_img, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[1], flip=self.FLIP_IMAGE
         )
 
     def write_analog_img_pumped(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_analog_img_pumped, value=value
+            shared_memory=self.shared_memory_buffers[2], value=value
         )
 
     def read_analog_img_pumped(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_analog_img_pumped, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[2], flip=self.FLIP_IMAGE
         )
 
     def write_threshold_img(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_threshold_img, value=value
+            shared_memory=self.shared_memory_buffers[3], value=value
         )
 
     def read_threshold_img(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_threshold_img, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[3], flip=self.FLIP_IMAGE
         )
 
     def write_threshold_img_pumped(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_threshold_img_pumped, value=value
+            shared_memory=self.shared_memory_buffers[4], value=value
         )
 
     def read_threshold_img_pumped(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_threshold_img_pumped, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[4], flip=self.FLIP_IMAGE
         )
 
     def write_counting_img(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_counting_img, value=value
+            shared_memory=self.shared_memory_buffers[5], value=value
         )
 
     def read_counting_img(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_counting_img, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[5], flip=self.FLIP_IMAGE
         )
 
     def write_counting_img_pumped(self, value):
         self._write_shared_array(
-            shared_memory=self.shared_memory_counting_img_pumped, value=value
+            shared_memory=self.shared_memory_buffers[6], value=value
         )
 
     def read_counting_img_pumped(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_counting_img_pumped, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[6], flip=self.FLIP_IMAGE
         )
 
     def write_raw_img(self, value):
-        self._write_shared_array(shared_memory=self.shared_memory_raw_img, value=value)
+        self._write_shared_array(
+            shared_memory=self.shared_memory_buffers[7], value=value
+        )
 
     def read_raw_img(self):
         return self._read_shared_array(
-            shared_memory=self.shared_memory_raw_img, flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[7], flip=self.FLIP_IMAGE
         )
 
     def write_threshold(self, value):
@@ -574,16 +593,7 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
-                    [
-                        self.shared_memory_analog_img,
-                        self.shared_memory_analog_img_pumped,
-                        self.shared_memory_threshold_img,
-                        self.shared_memory_threshold_img_pumped,
-                        self.shared_memory_counting_img,
-                        self.shared_memory_counting_img_pumped,
-                        self.shared_memory_pedestal,
-                        self.shared_memory_raw_img,
-                    ],  # need to changed corresponding to the frame_func
+                    self.shared_memory_buffers,  # need to changed corresponding to the frame_func
                     self.shared_processed_frames,
                     self.shared_threshold,
                     self.shared_counting_threshold,
@@ -649,13 +659,8 @@ class MoenchZmqServer(Device):
         self.max_frame_index.value = 0
 
         self._empty_shared_array(self.shared_memory_single_frames)
-        self._empty_shared_array(self.shared_memory_analog_img)
-        self._empty_shared_array(self.shared_memory_analog_img_pumped)
-        self._empty_shared_array(self.shared_memory_threshold_img)
-        self._empty_shared_array(self.shared_memory_threshold_img_pumped)
-        self._empty_shared_array(self.shared_memory_counting_img)
-        self._empty_shared_array(self.shared_memory_counting_img_pumped)
-        self._empty_shared_array(self.shared_memory_raw_img)
+        for buffer in self.shared_memory_buffers:
+            self._empty_shared_array(buffer)
         self.write_receive_frames(True)
         self.set_state(DevState.RUNNING)
 
@@ -770,36 +775,23 @@ class MoenchZmqServer(Device):
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros([400, 400], dtype=float).nbytes
         # allocating 4 arrays of this type
-        self.shared_memory_pedestal = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-        self.shared_memory_analog_img = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-        self.shared_memory_analog_img_pumped = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-        self.shared_memory_threshold_img = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-        self.shared_memory_threshold_img_pumped = (
-            self._shared_memory_manager.SharedMemory(size=img_bytes)
-        )
-        self.shared_memory_counting_img = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-        self.shared_memory_counting_img_pumped = (
-            self._shared_memory_manager.SharedMemory(size=img_bytes)
-        )
+        # 7 arrays: pedestal, analog_img, analog_img_pumped, threshold_img, threshold_img_pumped, counting_img, counting_img_pumped
+        self.shared_memory_buffers = []
+        for i in range(0, 8):
+            self.shared_memory_buffers.append(
+                self._shared_memory_manager.SharedMemory(size=img_bytes)
+            )
 
-        self.shared_memory_raw_img = self._shared_memory_manager.SharedMemory(
-            size=img_bytes
-        )
-
+        pedestals_buffer_bytes = np.zeros(
+            [self.PEDESTAL_FRAME_BUFFER_SIZE, 400, 400], dtype=np.uint16
+        ).nbytes
         buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
 
         self.shared_memory_single_frames = self._shared_memory_manager.SharedMemory(
             size=buffer_bytes
+        )
+        self.shared_memory_pedestals_buffer = self._shared_memory_manager.SharedMemory(
+            size=pedestals_buffer_bytes
         )
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
@@ -810,67 +802,28 @@ class MoenchZmqServer(Device):
         loop.create_task(self.main())
 
         # assigning the previews for the images (just for fun)
-
-        self._write_shared_array(
-            self.shared_memory_analog_img,
-            np.load(path.join(prefix, "default_images/analog_unpumped.npy")),
-        )
-        self._write_shared_array(
-            self.shared_memory_analog_img_pumped,
-            np.load(path.join(prefix, "default_images/analog_pumped.npy")),
-        )
-        self._write_shared_array(
-            self.shared_memory_threshold_img,
-            np.load(
-                path.join(
-                    prefix,
-                    "default_images/threshold_unpumped.npy",
+        save_folder = "default_images"
+        modes = ["analog", "threshold", "counting"]
+        pump_states = ["unpumped", "pumped"]
+        index = 1
+        for mode in modes:
+            for pump_state in pump_states:
+                self._write_shared_array(
+                    self.shared_memory_buffers[index],
+                    np.load(path.join(prefix, save_folder, f"{mode}_{pump_state}.npy")),
                 )
-            ),
-        )
-        self._write_shared_array(
-            self.shared_memory_threshold_img_pumped,
-            np.load(path.join(prefix, "default_images/threshold_pumped.npy")),
-        )
-        self._write_shared_array(
-            self.shared_memory_counting_img,
-            np.load(
-                path.join(
-                    prefix,
-                    "default_images/counting_unpumped.npy",
-                )
-            ),
-        )
-        self._write_shared_array(
-            self.shared_memory_counting_img_pumped,
-            np.load(path.join(prefix, "default_images/counting_pumped.npy")),
-        )
+                index += 1
 
         # initialization of tango events for pictures buffers
-        self.set_change_event("analog_img", True, False)
-        self.set_change_event("threshold_img", True, False)
-        self.set_change_event("counting_img", True, False)
-        self.set_change_event("analog_img_pumped", True, False)
-        self.set_change_event("threshold_img_pumped", True, False)
-        self.set_change_event("counting_img_pumped", True, False)
+        for attr in self._IMG_ATTR:
+            self.set_change_event(attr, True, False)
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
     @command
     def update_images_events(self):
-        self.push_change_event("analog_img", self.read_analog_img(), 400, 400),
-        self.push_change_event("threshold_img", self.read_threshold_img(), 400, 400)
-        self.push_change_event("counting_img", self.read_counting_img(), 400, 400)
-        self.push_change_event(
-            "analog_img_pumped", self.read_analog_img_pumped(), 400, 400
-        ),
-        self.push_change_event(
-            "threshold_img_pumped", self.read_threshold_img_pumped(), 400, 400
-        )
-        self.push_change_event(
-            "counting_img_pumped", self.read_counting_img_pumped(), 400, 400
-        )
-        self.push_change_event("raw_img", self.read_raw_img(), 400, 400)
+        for attr in self._IMG_ATTR:
+            self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
 
     # save files on disk for pictures buffers
     def save_files(self):
@@ -973,33 +926,32 @@ def wrap_function(
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
-    #     shared_memory_analog_img,
-    #     shared_memory_analog_img_pumped,
-    #     shared_memory_threshold_img,
-    #     shared_memory_threshold_img_pumped,
-    #     shared_memory_counting_img,
-    #     shared_memory_counting_img_pumped,
-    #     shared_memory_pedestal,
+    #     self.shared_memory_pedestal,
+    #     self.shared_memory_analog_img,
+    #     self.shared_memory_analog_img_pumped,
+    #     self.shared_memory_threshold_img,
+    #     self.shared_memory_threshold_img_pumped,
+    #     self.shared_memory_counting_img,
+    #     self.shared_memory_counting_img_pumped,
+    #     self.shared_memory_raw_img,
     # ]
     frame_index = header.get("frameIndex")
 
     process_pedestal, process_analog, process_threshold, process_counting = use_modes
     print(use_modes)
-
-    analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
+    pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
+    analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[1].buf)
     analog_img_pumped = np.ndarray(
-        (400, 400), dtype=float, buffer=shared_memories[1].buf
+        (400, 400), dtype=float, buffer=shared_memories[2].buf
     )
-    threshold_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[2].buf)
+    threshold_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[3].buf)
     threshold_img_pumped = np.ndarray(
-        (400, 400), dtype=float, buffer=shared_memories[3].buf
+        (400, 400), dtype=float, buffer=shared_memories[4].buf
     )
-    counting_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[4].buf)
+    counting_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[5].buf)
     counting_img_pumped = np.ndarray(
-        (400, 400), dtype=float, buffer=shared_memories[5].buf
+        (400, 400), dtype=float, buffer=shared_memories[6].buf
     )
-    pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[6].buf)
-
     raw = np.ndarray((400, 400), dtype=float, buffer=shared_memories[7].buf)
 
     single_frame_buffer = np.ndarray(
