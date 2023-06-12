@@ -32,6 +32,12 @@ class ProcessingMode(IntEnum):
     PEDESTAL = 3
 
 
+class FrameType(IntEnum):
+    PEDESTAL = 0
+    PUMPED = 1
+    UNPUMPED = 2
+
+
 class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
 
@@ -96,6 +102,7 @@ class MoenchZmqServer(Device):
     _filename = ""
     _filepath = ""
     _file_index = 0
+    _normalize = True
 
     _abort_await = False
 
@@ -156,6 +163,14 @@ class MoenchZmqServer(Device):
         dtype=int,
         access=AttrWriteType.READ,
         doc="File name: [filename]_d0_f[sub_file_index]_[acquisition/file_index].raw",
+    )
+    normalize = attribute(
+        label="normalize",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc="if true - normalize the images like 1 frame (divide through frames number)",
     )
     pedestal = attribute(
         display_level=DispLevel.EXPERT,
@@ -403,6 +418,12 @@ class MoenchZmqServer(Device):
     def read_file_index(self):
         return self._file_index
 
+    def write_normalize(self, value):
+        self._normalize = bool(value)
+
+    def read_normalize(self):
+        return self._normalize
+
     def write_previous_file_index(self, value):
         pass
 
@@ -424,9 +445,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[1], value=value
         )
 
-    def read_analog_img(self):
+    def read_analog_img(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[1], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[1], flip=flip
         )
 
     def write_analog_img_pumped(self, value):
@@ -434,9 +457,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[2], value=value
         )
 
-    def read_analog_img_pumped(self):
+    def read_analog_img_pumped(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[2], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[2], flip=flip
         )
 
     def write_threshold_img(self, value):
@@ -444,9 +469,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[3], value=value
         )
 
-    def read_threshold_img(self):
+    def read_threshold_img(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[3], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[3], flip=flip
         )
 
     def write_threshold_img_pumped(self, value):
@@ -454,9 +481,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[4], value=value
         )
 
-    def read_threshold_img_pumped(self):
+    def read_threshold_img_pumped(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[4], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[4], flip=flip
         )
 
     def write_counting_img(self, value):
@@ -464,9 +493,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[5], value=value
         )
 
-    def read_counting_img(self):
+    def read_counting_img(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[5], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[5], flip=flip
         )
 
     def write_counting_img_pumped(self, value):
@@ -474,9 +505,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[6], value=value
         )
 
-    def read_counting_img_pumped(self):
+    def read_counting_img_pumped(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[6], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[6], flip=flip
         )
 
     def write_raw_img(self, value):
@@ -484,9 +517,11 @@ class MoenchZmqServer(Device):
             shared_memory=self.shared_memory_buffers[7], value=value
         )
 
-    def read_raw_img(self):
+    def read_raw_img(self, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         return self._read_shared_array(
-            shared_memory=self.shared_memory_buffers[7], flip=self.FLIP_IMAGE
+            shared_memory=self.shared_memory_buffers[7], flip=flip
         )
 
     def write_threshold(self, value):
@@ -716,6 +751,30 @@ class MoenchZmqServer(Device):
             )
             averaged_pedestal = non_averaged_pedestal / received_frames_at_the_time
             self.write_pedestal(averaged_pedestal)
+        # normalization for all other images
+        unpumped_frames = self.read_unpumped_frames()
+        pumped_frames = self.read_pumped_frames()
+        if self.read_normalize():
+            if unpumped_frames != 0:
+                self.write_analog_img(
+                    self.read_analog_img(flip=False) / unpumped_frames
+                )
+                self.write_threshold_img(
+                    self.read_threshold_img(flip=False) / unpumped_frames
+                )
+                self.write_counting_img(
+                    self.read_counting_img(flip=False) / unpumped_frames
+                )
+            if pumped_frames != 0:
+                self.write_analog_img_pumped(
+                    self.read_analog_img_pumped(flip=False) / pumped_frames
+                )
+                self.write_threshold_img_pumped(
+                    self.read_threshold_img_pumped(flip=False) / pumped_frames
+                )
+                self.write_counting_img_pumped(
+                    self.read_counting_img_pumped(flip=False) / pumped_frames
+                )
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_files()
@@ -972,10 +1031,16 @@ def wrap_function(
     #     self.shared_memory_counting_img_pumped,
     #     self.shared_memory_raw_img,
     # ]
-    frame_index = header.get("frameIndex")
 
     process_pedestal, process_analog, process_threshold, process_counting = use_modes
-    print(use_modes)
+    # get frame index from json header to determine the frame ordinal number
+    frame_index = header.get("frameIndex")
+    """
+    creating a numpy array with copy of the uncoming frame
+    casting up to float due to the further pedestal subtraction (averaged pedestal will have fractional part)
+    """
+    payload_copy = payload.astype(float, copy=True)
+    # creating numpy arrays from shared memories; could not be automatically created with locals()["..."]
     pedestal = np.ndarray((400, 400), dtype=float, buffer=shared_memories[0].buf)
     analog_img = np.ndarray((400, 400), dtype=float, buffer=shared_memories[1].buf)
     analog_img_pumped = np.ndarray(
@@ -994,12 +1059,26 @@ def wrap_function(
     single_frame_buffer = np.ndarray(
         (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
     )
-    lock.acquire()
+
+    # calculations oustide of lock
+    # variables assignments inside of lock
+
     max_file_index.value = max(max_file_index.value, frame_index)
     single_frame_buffer[frame_index] = payload
-    payload_copy = payload.astype(float, copy=True)
+
     no_ped = payload_copy - pedestal
     print(f"Enter processing frame {frame_index}")
+
+    # we need to classify the frame (is it new pedestal/pumped/unpumped) before the processing
+    # later configurable with str array like sequence: [unpumped, ped, ped, ped, pumped, ped, ped, ped,]
+    frametype = None
+    if split_pump:
+        if frame_index % 2 == 0:
+            frametype = FrameType.UNPUMPED
+        else:
+            frametype = FrameType.PUMPED
+    else:
+        frametype = FrameType.UNPUMPED
 
     raw += payload
     if process_pedestal:
@@ -1008,36 +1087,29 @@ def wrap_function(
         pedestal += payload_copy
     else:
         if process_analog:
+            pass
             print("Processing analog...")
-            if split_pump:
-                if frame_index % 2 == 0:
-                    analog_img += no_ped
-                    unpumped_frames.value += 1
-                else:
-                    analog_img_pumped += no_ped
-                    pumped_frames.value += 1
-            else:
-                analog_img += no_ped
         if process_threshold:
             print("Processing threshold...")
             thresholded = no_ped > threshold.value
             print(f"th = {threshold.value}")
-            if split_pump:
-                if frame_index % 2 == 0:
-                    threshold_img += thresholded
-                else:
-                    threshold_img_pumped += thresholded
-            else:
-                threshold_img += thresholded
         if process_counting:
+            print("Processing counting...")
             clustered = no_ped > counting_threshold.value
-            if split_pump:
-                if frame_index % 2 == 0:
-                    counting_img += clustered
-                else:
-                    counting_img_pumped += clustered
-            else:
-                counting_img += clustered
+    lock.acquire()
+    match frametype:
+        case FrameType.UNPUMPED:
+            if process_analog:
+                analog_img += no_ped
+            if process_threshold:
+                threshold_img += thresholded
+            unpumped_frames.value += 1
+        case FrameType.PUMPED:
+            if process_analog:
+                analog_img_pumped += no_ped
+            if process_threshold:
+                threshold_img_pumped += thresholded
+            pumped_frames.value += 1
     processed_frames.value += 1
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
