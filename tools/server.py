@@ -16,15 +16,18 @@ def inverse_reorder(twod_array):
     return twod_array.flatten()[inverse_table]
 
 
-def gen_bytes_frame(frameIndex):
+def gen_bytes_frame(frameIndex, isPed):
     frame = np.zeros([400, 400], dtype=np.uint16)
-    image = Image.fromarray(frame)
-    draw = ImageDraw.Draw(image)
-    # 13x13
-    x = frameIndex // 15
-    y = frameIndex % 15
-    draw.text((y * 25, x * 25), str(frameIndex), font=font, fill=1)
-    array = np.array(image).astype(np.uint16)
+    if isPed:
+        array = np.ones([400, 400], dtype=np.uint16) * 500
+    else:
+        image = Image.fromarray(frame)
+        draw = ImageDraw.Draw(image)
+        # 13x13
+        x = frameIndex // 15
+        y = frameIndex % 15
+        draw.text((y * 25, x * 25), str(frameIndex), font=font, fill=1)
+        array = np.array(image).astype(np.uint16) + 500
     return inverse_reorder(array).tobytes()
 
 
@@ -90,11 +93,16 @@ dummy = {
 }
 
 while True:
+    type = input("Data or pedestals? (Default is data)")
+    if type == "":
+        type = False
+    else:
+        type = True
     i = input(f"Enter amount of packets to send with 100Hz\n")
     for x in range(int(i)):
         json_header["frameIndex"] = x
         socket.send_json(json_header)
-        socket.send(gen_bytes_frame(x))
+        socket.send(gen_bytes_frame(x, type))
         socket.send_json(dummy)
         print(f"Sent packet nr {x}")
         time.sleep(0.01)

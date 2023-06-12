@@ -656,6 +656,7 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
+                    self._pedestal_lock,
                     self.shared_memory_buffers,  # need to changed corresponding to the frame_func
                     self.shared_processed_frames,
                     self.shared_threshold,
@@ -663,6 +664,9 @@ class MoenchZmqServer(Device):
                     self.read_split_pump(),
                     self.shared_unpumped_frames,
                     self.shared_pumped_frames,
+                    self.PEDESTAL_FRAME_BUFFER_SIZE,
+                    self.shared_memory_pedestals_indexes,
+                    self.shared_memory_pedestals_buffer,
                 )
                 future = asyncio.wrap_future(future)
 
@@ -745,12 +749,6 @@ class MoenchZmqServer(Device):
             time.sleep(0.5)
         # averaging pedetal which we have accumulated
         self._abort_await = False
-        if self.read_process_pedestal_img():
-            non_averaged_pedestal = self._read_shared_array(
-                self.shared_memory_pedestal, flip=False
-            )
-            averaged_pedestal = non_averaged_pedestal / received_frames_at_the_time
-            self.write_pedestal(averaged_pedestal)
         # normalization for all other images
         unpumped_frames = self.read_unpumped_frames()
         pumped_frames = self.read_pumped_frames()
@@ -832,6 +830,8 @@ class MoenchZmqServer(Device):
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
         self._lock = self._manager.Lock()
+        # extra pedestal lock for pedestal evaluation
+        self._pedestal_lock = self._manager.Lock()
 
         # manager for allocation of shared memory between threads
         self._shared_memory_manager = SharedMemoryManager()
@@ -878,6 +878,10 @@ class MoenchZmqServer(Device):
         pedestals_buffer_bytes = np.zeros(
             [self.PEDESTAL_FRAME_BUFFER_SIZE, 400, 400], dtype=np.uint16
         ).nbytes
+        indexes_buffer_bytes = np.zeros(
+            self.SINGLE_FRAME_BUFFER_SIZE, dtype=np.int32
+        ).nbytes
+
         buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
 
         self.shared_memory_single_frames = self._shared_memory_manager.SharedMemory(
@@ -886,6 +890,15 @@ class MoenchZmqServer(Device):
         self.shared_memory_pedestals_buffer = self._shared_memory_manager.SharedMemory(
             size=pedestals_buffer_bytes
         )
+        self.shared_memory_pedestals_indexes = self._shared_memory_manager.SharedMemory(
+            size=indexes_buffer_bytes
+        )
+        indexes_array = np.ndarray(
+            self.SINGLE_FRAME_BUFFER_SIZE,
+            dtype=np.int32,
+            buffer=self.shared_memory_pedestals_indexes.buf,
+        )
+        indexes_array[:] = -np.arange(self.SINGLE_FRAME_BUFFER_SIZE) - 1
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
 
@@ -1012,6 +1025,7 @@ def wrap_function(
     header,
     payload,
     lock,
+    pedestal_lock,
     shared_memories,
     processed_frames,
     threshold,
@@ -1019,6 +1033,9 @@ def wrap_function(
     split_pump,
     unpumped_frames,
     pumped_frames,
+    pedestals_buffer_size,
+    pedestal_indexes_shared_memory,
+    pedestal_buffer_shared_memory,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -1059,14 +1076,20 @@ def wrap_function(
     single_frame_buffer = np.ndarray(
         (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
     )
-
+    indexes_buffer = np.ndarray(
+        pedestals_buffer_size, dtype=np.int32, buffer=pedestal_indexes_shared_memory.buf
+    )
+    pedestals_frame_buffer = np.ndarray(
+        (pedestals_buffer_size, 400, 400),
+        dtype=np.uint16,
+        buffer=pedestal_buffer_shared_memory.buf,
+    )
     # calculations oustide of lock
     # variables assignments inside of lock
 
     max_file_index.value = max(max_file_index.value, frame_index)
     single_frame_buffer[frame_index] = payload
 
-    no_ped = payload_copy - pedestal
     print(f"Enter processing frame {frame_index}")
 
     # we need to classify the frame (is it new pedestal/pumped/unpumped) before the processing
@@ -1079,13 +1102,25 @@ def wrap_function(
             frametype = FrameType.PUMPED
     else:
         frametype = FrameType.UNPUMPED
-
-    raw += payload
     if process_pedestal:
-        # just summing up because amount of successfully received frames is unknown
-        # they will be averaged in stop_server post hook
-        pedestal += payload_copy
+        frametype = FrameType.PEDESTAL
+    if frametype is FrameType.PEDESTAL:
+        pedestal_lock.acquire()
+        print("enter pedestal lock")
+        push_to_buffer(
+            indexes_buffer,
+            pedestals_frame_buffer,
+            frame_index,
+            payload_copy,
+            pedestal,
+            pedestals_buffer_size,
+        )
+        pedestal_lock.release()
+        print("quit pedesal lock")
     else:
+        pedestal_lock.acquire()
+        no_ped = payload_copy - pedestal
+        pedestal_lock.release()
         if process_analog:
             pass
             print("Processing analog...")
@@ -1111,9 +1146,22 @@ def wrap_function(
                 threshold_img_pumped += thresholded
             pumped_frames.value += 1
     processed_frames.value += 1
+    raw += payload
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
     lock.release()
+
+
+def push_to_buffer(
+    indexes_array, pedestal_array, new_index, new_ped, pedestal, buf_size
+):
+    arg_min = np.argmin(indexes_array)
+    print(indexes_array[arg_min])
+    old_data = np.copy(pedestal_array[arg_min])
+    indexes_array[arg_min] = new_index
+    pedestal_array[arg_min] = new_ped
+    pedestal[:] = pedestal - old_data / buf_size + new_ped / buf_size
+    print(pedestal[0, 0], old_data[0, 0], new_ped[0, 0])
 
 
 if __name__ == "__main__":
