@@ -77,6 +77,8 @@ class MoenchZmqServer(Device):
     shared_counting_threshold = None
     shared_processed_frames = None
     shared_received_frames = None
+    shared_unpumped_frames = None
+    shared_pumped_frames = None
     shared_receive_frames = None
     _split_pump = False
     _process_pedestal_img = False
@@ -276,6 +278,20 @@ class MoenchZmqServer(Device):
         dtype=int,
         access=AttrWriteType.READ,
         doc="expected frames to receive from detector",
+    )
+    unpumped_frames = attribute(
+        display_level=DispLevel.EXPERT,
+        label="unpumped frames",
+        dtype=int,
+        access=AttrWriteType.READ,
+        doc="received unpumped frames",
+    )
+    pumped_frames = attribute(
+        display_level=DispLevel.EXPERT,
+        label="pumped frames",
+        dtype=int,
+        access=AttrWriteType.READ,
+        doc="received pumped frames",
     )
 
     receive_frames = attribute(
@@ -516,6 +532,18 @@ class MoenchZmqServer(Device):
     def read_received_frames(self):
         return self.shared_received_frames.value
 
+    def write_unpumped_frames(self, value):
+        self.shared_unpumped_frames.value = value
+
+    def read_unpumped_frames(self):
+        return self.shared_unpumped_frames.value
+
+    def write_pumped_frames(self, value):
+        self.shared_pumped_frames.value = value
+
+    def read_pumped_frames(self):
+        return self.shared_pumped_frames.value
+
     def write_receive_frames(self, value):
         self.shared_receive_frames.value = int(value)
 
@@ -598,6 +626,8 @@ class MoenchZmqServer(Device):
                     self.shared_threshold,
                     self.shared_counting_threshold,
                     self.read_split_pump(),
+                    self.shared_unpumped_frames,
+                    self.shared_pumped_frames,
                 )
                 future = asyncio.wrap_future(future)
 
@@ -656,6 +686,8 @@ class MoenchZmqServer(Device):
             self._empty_shared_array(self.shared_memory_pedestal)
         self.write_processed_frames(0)
         self.write_received_frames(0)
+        self.write_unpumped_frames(0)
+        self.write_pumped_frames(0)
         self.max_frame_index.value = 0
 
         self._empty_shared_array(self.shared_memory_single_frames)
@@ -682,8 +714,8 @@ class MoenchZmqServer(Device):
             non_averaged_pedestal = self._read_shared_array(
                 self.shared_memory_pedestal, flip=False
             )
-            averaged_pedesal = non_averaged_pedestal / received_frames_at_the_time
-            self.write_pedestal(averaged_pedesal)
+            averaged_pedestal = non_averaged_pedestal / received_frames_at_the_time
+            self.write_pedestal(averaged_pedestal)
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_files()
@@ -767,6 +799,8 @@ class MoenchZmqServer(Device):
         self.shared_receive_frames = self._manager.Value("b", 0)
         self.shared_processed_frames = self._manager.Value("I", 0)
         self.shared_received_frames = self._manager.Value("I", 0)
+        self.shared_unpumped_frames = self._manager.Value("I", 0)
+        self.shared_pumped_frames = self._manager.Value("I", 0)
         self.shared_amount_frames = self._manager.Value("I", 0)
         self.shared_split_pump = self._manager.Value("b", 0)
 
@@ -774,7 +808,7 @@ class MoenchZmqServer(Device):
 
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros([400, 400], dtype=float).nbytes
-        # allocating 4 arrays of this type
+        # allocating 1x400x400 arrays for images
         # 7 arrays: pedestal, analog_img, analog_img_pumped, threshold_img, threshold_img_pumped, counting_img, counting_img_pumped
         self.shared_memory_buffers = []
         for i in range(0, 8):
@@ -823,6 +857,7 @@ class MoenchZmqServer(Device):
     @command
     def update_images_events(self):
         for attr in self._IMG_ATTR:
+            # call corresponding read_... functions with eval(...) instead of write it for each function call
             self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
 
     # save files on disk for pictures buffers
@@ -923,6 +958,8 @@ def wrap_function(
     threshold,
     counting_threshold,
     split_pump,
+    unpumped_frames,
+    pumped_frames,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -975,8 +1012,10 @@ def wrap_function(
             if split_pump:
                 if frame_index % 2 == 0:
                     analog_img += no_ped
+                    unpumped_frames.value += 1
                 else:
                     analog_img_pumped += no_ped
+                    pumped_frames.value += 1
             else:
                 analog_img += no_ped
         if process_threshold:
