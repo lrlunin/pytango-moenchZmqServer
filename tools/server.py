@@ -1,31 +1,42 @@
 import zmq
-import random
-import sys
+from PIL import Image, ImageDraw, ImageFont
 import time
 import numpy as np
 
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
-socket.bind("tcp://127.0.0.1:50003")
+socket.bind("tcp://192.168.2.200:50003")
 
-raw_frame_sim = np.zeros([400, 400], dtype=np.uint16)
-c = 0
-for y in range(0, 400, 100):
-    for x in range(0, 400):
-        raw_frame_sim[y : y + 100, x] = c
-        c += 1
+reorder_table = np.load("reorder_tables/moench03.npy")
+inverse_table = np.argsort(reorder_table.flatten())
+font = ImageFont.truetype("tools/RobotoMono-Regular.ttf", size=12)
 
-# raw_frame_sim = np.arange(0, 400 * 400, dtype=np.uint16).reshape(400, 400)
+
+def inverse_reorder(twod_array):
+    return twod_array.flatten()[inverse_table]
+
+
+def gen_bytes_frame(frameIndex):
+    frame = np.zeros([400, 400], dtype=np.uint16)
+    image = Image.fromarray(frame)
+    draw = ImageDraw.Draw(image)
+    # 13x13
+    x = frameIndex // 15
+    y = frameIndex % 15
+    draw.text((y * 25, x * 25), str(frameIndex), font=font, fill=1)
+    array = np.array(image).astype(np.uint16)
+    return inverse_reorder(array).tobytes()
+
 
 json_header = {
     "jsonversion": 4,
     "bitmode": 16,
-    "fileIndex": 6,
+    "fileIndex": 5,
     "detshape": [1, 1],
     "shape": [400, 400],
     "size": 320000,
     "acqIndex": 1,
-    "frameIndex": 0,
+    "frameIndex": 1,
     "progress": 100.0,
     "fname": "/mnt/LocalData/DATA/MOENCH/20230128_run/230128",
     "data": 1,
@@ -56,7 +67,7 @@ dummy = {
     "shape": [0, 0],
     "size": 0,
     "acqIndex": 0,
-    "frameIndex": 0,
+    "frameIndex": 5,
     "progress": 0.0,
     "fname": "",
     "data": 0,
@@ -77,15 +88,13 @@ dummy = {
     "flipRows": 0,
     "quad": 0,
 }
-c = 1
+
 while True:
-    a = raw_frame_sim
-    bytes = a.tobytes()
-    c += 1
     i = input(f"Enter amount of packets to send with 100Hz\n")
     for x in range(int(i)):
+        json_header["frameIndex"] = x
         socket.send_json(json_header)
-        socket.send(bytes)
+        socket.send(gen_bytes_frame(x))
         socket.send_json(dummy)
-        print(f"Sent packet nr {x+1}")
+        print(f"Sent packet nr {x}")
         time.sleep(0.01)
