@@ -13,6 +13,14 @@ setup(
     entry_points={"console_scripts": ["MoenchZmqServer = tangods_moenchzmq:main"]},
     license="MIT",
     packages=["tangods_moenchzmq"],
+    # for future pip packaging
+    # install_requires=[
+    #     "pytango>=9.3.6",
+    #     "nump>=1.24",
+    #     "pyzmq>=23.2",
+    #     "Pillow>=9.3",
+    #     "numba>=0.57",
+    # ],
     package_data={"tangods_moenchzmq": ["VERSION"]},
     data_files=[
         (
