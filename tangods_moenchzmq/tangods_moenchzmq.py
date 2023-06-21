@@ -734,7 +734,7 @@ class MoenchZmqServer(Device):
 
     @command
     def start_receiver(self):
-        empty = np.zeros([400, 400], dtype=float)
+        empty = np.zeros((400, 400), dtype=float)
         # clear previous values
         if self.read_processing_mode() is ProcessingMode.PEDESTAL:
             self._empty_shared_array(self.shared_memory_pedestal)
@@ -808,7 +808,7 @@ class MoenchZmqServer(Device):
 
     @command
     def reset_pedestal(self):
-        empty = np.zeros([400, 400], dtype=float)
+        empty = np.zeros((400, 400), dtype=float)
         self.write_pedestal(empty)
 
     def get_max_file_index(self, filepath, filename):
@@ -882,7 +882,7 @@ class MoenchZmqServer(Device):
         self.max_frame_index = self._manager.Value("I", 0)
 
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
-        img_bytes = np.zeros([400, 400], dtype=float).nbytes
+        img_bytes = np.zeros((400, 400), dtype=float).nbytes
         # allocating 1x400x400 arrays for images
         # 7 arrays: pedestal, analog_img, analog_img_pumped, threshold_img, threshold_img_pumped, counting_img, counting_img_pumped
         self.shared_memory_buffers = []
@@ -1178,12 +1178,10 @@ def push_to_buffer(
     indexes_array, pedestal_array, new_index, new_ped, pedestal, buf_size
 ):
     arg_min = np.argmin(indexes_array)
-    print(indexes_array[arg_min])
     old_data = np.copy(pedestal_array[arg_min])
     indexes_array[arg_min] = new_index
     pedestal_array[arg_min] = new_ped
     pedestal[:] = pedestal - old_data / buf_size + new_ped / buf_size
-    print(pedestal[0, 0], old_data[0, 0], new_ped[0, 0])
 
 
 if __name__ == "__main__":
