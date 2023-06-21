@@ -1,6 +1,6 @@
 import numpy as np
 from enum import IntEnum
-from numba import njit, cuda
+from numba import njit
 
 
 class eventType(IntEnum):
@@ -74,15 +74,18 @@ def getClusters(frame, nSigma=3, rms=20, clusterSize=3):
     return cluster_map
 
 
-@njit("i1[:,:](f8[:,:], i1[:,:], i1, i1, i1)")
-def getClustersJit(frame, cluster_map, nSigma=3, rms=20, clusterSize=3):
-    # cluster_map = np.zeros([400, 400], dtype=np.int8)
+@njit("i1[:,:](f8[:,:], f8)")  # i1[:,:]
+def getClustersJit(frame, nSigma=3):
+    cluster_map = np.zeros((400, 400), dtype=np.int8)
+    rms = 20
+    clusterSize = 3
     for iy in range(400):
         for ix in range(400):
-            max_value = tl = tr = bl = br = tot = quad = quadTot = 0
+            max_value = tl = tr = bl = br = tot = 0
             c2 = (clusterSize + 1) / 2
             c3 = clusterSize
-            ee = ""
+            # 0 - photon, 1 - photon_max
+            ee = 0
             for ir in range(-clusterSize // 2, clusterSize // 2 + 1):
                 for ic in range(-clusterSize // 2, clusterSize // 2 + 1):
                     if (
@@ -103,31 +106,16 @@ def getClustersJit(frame, cluster_map, nSigma=3, rms=20, clusterSize=3):
                             tr += v
                         if v > max_value:
                             max_value = v
-                if frame[iy, ix] < -nSigma * rms:
-                    ee = "neg"
-                    pass
                 if max_value > nSigma * rms:
-                    ee = "photon"
+                    ee = 0
                     if frame[iy, ix] < max_value:
                         continue
                 elif tot > c3 * nSigma * rms:
-                    ee = "photon"
-                else:
-                    # quad = quadrant.BOTTOM_RIGHT
-                    quadTot = br
-                    if bl >= quadTot:
-                        # quad = quadrant.BOTTOM_LEFT
-                        quadTot = bl
-                    if tl >= quadTot:
-                        # quad = quadrant.TOP_LEFT
-                        quadTot = tl
-                    if tr >= quadTot:
-                        # quad = quadrant.TOP_RIGHT
-                        quadTot = tr
-                    if quadTot > c2 * nSigma * rms:
-                        ee = "photon"
-                if ee == "photon" and frame[iy, ix] == max_value:
-                    ee == "photon_max"
+                    ee = 0
+                elif max(bl, br, tl, tr) > c2 * nSigma * rms:
+                    ee = 0
+                if ee == 0 and frame[iy, ix] == max_value:
+                    ee == 1
                     cluster_map[iy, ix] = 1
     return cluster_map
 

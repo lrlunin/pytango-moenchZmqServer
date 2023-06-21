@@ -7,6 +7,7 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
+from .proc_funcs.counting import getClustersJit
 
 import sys
 import re
@@ -86,6 +87,7 @@ class MoenchZmqServer(Device):
     shared_unpumped_frames = None
     shared_pumped_frames = None
     shared_receive_frames = None
+    shared_pedestal_frames = None
     _split_pump = False
     _process_pedestal_img = False
     _process_analog_img = True
@@ -316,7 +318,13 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ,
         doc="if true - server receives frames, otherwise - ignores",
     )
-
+    pedestal_frames = attribute(
+        display_level=DispLevel.EXPERT,
+        label="proc pedestal amount",
+        dtype=int,
+        access=AttrWriteType.READ,
+        doc="how many pedestal frames were captured since the server started",
+    )
     split_pump = attribute(
         label="split (un)pumped",
         dtype=bool,
@@ -580,10 +588,16 @@ class MoenchZmqServer(Device):
         return self.shared_pumped_frames.value
 
     def write_receive_frames(self, value):
-        self.shared_receive_frames.value = int(value)
+        self.shared_receive_frames.value = bool(value)
 
     def read_receive_frames(self):
         return bool(self.shared_receive_frames.value)
+
+    def write_pedestal_frames(self, value):
+        self.shared_pedestal_frames.value = value
+
+    def read_pedestal_frames(self):
+        return self.shared_pedestal_frames.value
 
     def write_split_pump(self, value):
         self._split_pump = bool(value)
@@ -667,6 +681,7 @@ class MoenchZmqServer(Device):
                     self.PEDESTAL_FRAME_BUFFER_SIZE,
                     self.shared_memory_pedestals_indexes,
                     self.shared_memory_pedestals_buffer,
+                    self.shared_memory_pedestal,
                 )
                 future = asyncio.wrap_future(future)
 
@@ -856,6 +871,7 @@ class MoenchZmqServer(Device):
         self.shared_threshold = self._manager.Value("f", 0)
         self.shared_counting_threshold = self._manager.Value("f", 0)
         self.shared_receive_frames = self._manager.Value("b", 0)
+        self.shared_pedestal_frames = self._manager.Value("I", 0)
         self.shared_processed_frames = self._manager.Value("I", 0)
         self.shared_received_frames = self._manager.Value("I", 0)
         self.shared_unpumped_frames = self._manager.Value("I", 0)
@@ -1036,6 +1052,7 @@ def wrap_function(
     pedestals_buffer_size,
     pedestal_indexes_shared_memory,
     pedestal_buffer_shared_memory,
+    pedestal_frames_amount,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -1110,11 +1127,12 @@ def wrap_function(
         push_to_buffer(
             indexes_buffer,
             pedestals_frame_buffer,
-            frame_index,
+            pedestal_frames_amount.value,
             payload_copy,
             pedestal,
             pedestals_buffer_size,
         )
+        pedestal_frames_amount.value += 1
         pedestal_lock.release()
         print("quit pedesal lock")
     else:
@@ -1130,7 +1148,7 @@ def wrap_function(
             print(f"th = {threshold.value}")
         if process_counting:
             print("Processing counting...")
-            clustered = no_ped > counting_threshold.value
+            clustered = getClustersJit(no_ped)
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:
@@ -1138,12 +1156,16 @@ def wrap_function(
                 analog_img += no_ped
             if process_threshold:
                 threshold_img += thresholded
+            if process_counting:
+                counting_img += clustered
             unpumped_frames.value += 1
         case FrameType.PUMPED:
             if process_analog:
                 analog_img_pumped += no_ped
             if process_threshold:
                 threshold_img_pumped += thresholded
+            if process_counting:
+                counting_img_pumped += clustered
             pumped_frames.value += 1
     processed_frames.value += 1
     raw += payload

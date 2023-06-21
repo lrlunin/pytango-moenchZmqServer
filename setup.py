@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 from glob import glob
 
 version = open("VERSION", encoding="utf-8").read()
@@ -12,7 +12,7 @@ setup(
     python_requires=">=3.10",
     entry_points={"console_scripts": ["MoenchZmqServer = tangods_moenchzmq:main"]},
     license="MIT",
-    packages=["tangods_moenchzmq"],
+    packages=find_packages(),
     # for future pip packaging
     # install_requires=[
     #     "pytango>=9.3.6",
