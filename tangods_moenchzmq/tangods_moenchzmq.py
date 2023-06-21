@@ -7,7 +7,7 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
-from .proc_funcs.counting import getClustersJit
+from .proc_funcs.counting import getClustersSLS
 
 import sys
 import re
@@ -26,13 +26,6 @@ from tango.server import (
 )
 
 
-class ProcessingMode(IntEnum):
-    ANALOG = 0
-    THRESHOLD = 1
-    COUNTING = 2
-    PEDESTAL = 3
-
-
 class FrameType(IntEnum):
     PEDESTAL = 0
     PUMPED = 1
@@ -43,7 +36,6 @@ class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
 
     processing_function = None
-    _processing_function_enum = ProcessingMode(0)
 
     _manager = None
     _context = None
@@ -275,14 +267,6 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="cut-off value for counting",
     )
-    # processing_mode = attribute(
-    #     label="mode",
-    #     dtype=ProcessingMode,
-    #     access=AttrWriteType.READ_WRITE,
-    #     memorized=True,
-    #     hw_memorized=True,
-    #     doc="mode of frames processing [ANALOG = 0, THRESHOLD = 1, COUNTING = 2, PEDESTAL = 3]",
-    # )
 
     processed_frames = attribute(
         label="proc frames",
@@ -546,18 +530,6 @@ class MoenchZmqServer(Device):
     def read_counting_threshold(self):
         return self.shared_counting_threshold.value
 
-    def write_processing_mode(self, value):
-        # matching values and functions [ANALOG = 0, THRESHOLD = 1, COUNTING = 2]
-        self._processing_function_enum = ProcessingMode(value)
-        # will be
-        # match self.processing_function_enum:
-        #     case ProcessingMode.ANALOG:
-        #         self.processing_function = processing_functions.analog
-        #     case ProcessingMode.THRESHOLD:
-        #         self.processing_function = processing_functions.thresholding
-        #     case ProcessingMode.COUNTING:
-        #         self.processing_function = processing_functions.counting
-
     def read_processing_mode(self):
         return self._processing_function_enum
 
@@ -734,10 +706,7 @@ class MoenchZmqServer(Device):
 
     @command
     def start_receiver(self):
-        empty = np.zeros((400, 400), dtype=float)
         # clear previous values
-        if self.read_processing_mode() is ProcessingMode.PEDESTAL:
-            self._empty_shared_array(self.shared_memory_pedestal)
         self.write_processed_frames(0)
         self.write_received_frames(0)
         self.write_unpumped_frames(0)
@@ -1148,7 +1117,7 @@ def wrap_function(
             print(f"th = {threshold.value}")
         if process_counting:
             print("Processing counting...")
-            clustered = getClustersJit(no_ped)
+            clustered = getClustersSLS(no_ped)
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:
