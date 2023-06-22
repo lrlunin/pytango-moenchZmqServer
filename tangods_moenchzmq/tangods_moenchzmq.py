@@ -655,7 +655,6 @@ class MoenchZmqServer(Device):
                     self.shared_memory_pedestals_buffer,
                     self.shared_pedestal_frames,
                 )
-                future = asyncio.wrap_future(future)
 
     async def get_msg_pair(self):
         isNextPacketData = True
@@ -1120,11 +1119,7 @@ def wrap_function(
             print(f"th = {threshold.value}")
         if process_counting:
             print("Processing counting...")
-            cluster_map = np.zeros((400, 400), dtype=float)
-            voidgetClustersSLS(no_ped, cluster_map, counting_threshold.value)
-            clustered = cluster_map
-            del cluster_map
-            # clustered = getClustersSLS(no_ped, counting_threshold.value)
+            clustered = getClustersSLS(no_ped, counting_threshold.value)
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:
