@@ -96,11 +96,12 @@ we need to add 1 before division)
 #     return cluster_map
 
 
-@njit("i1[:,:](f8[:,:], f8, f8, f8)")
-def getClustersSLS(frame, max_value_th, sub_clust_th, clust_th):
+@njit("i1[:,:](f8[:,:], f8)")
+def getClustersSLS(frame, cut_off_adu):
     clusterSize = 3
     cluster_map = np.zeros((400, 400), dtype=np.int8)
-
+    c2 = (clusterSize + 1) / 2
+    c3 = clusterSize
     for iy in range(400):
         for ix in range(400):
             max_value = tl = tr = bl = br = tot = 0
@@ -128,18 +129,65 @@ def getClustersSLS(frame, max_value_th, sub_clust_th, clust_th):
                             tr += v
                         if v > max_value:
                             max_value = v
-                if max_value > max_value_th:
+                if max_value > cut_off_adu:
                     ee = 1
                     if frame[iy, ix] < max_value:
                         continue
-                elif tot > clust_th:
+                elif tot > c3 * cut_off_adu:
                     ee = 1
-                elif max(bl, br, tl, tr) > sub_clust_th:
+                elif max(bl, br, tl, tr) > c2 * cut_off_adu:
                     ee = 1
                 if ee == 1 and frame[iy, ix] == max_value:
                     ee == 2
                     cluster_map[iy, ix] = 1
     return cluster_map
+
+
+@njit("void(f8[:,:], f8[:,:], f8)")
+def voidgetClustersSLS(frame, cluster_map, cut_off_adu):
+    clusterSize = 3
+    # cluster_map = np.zeros((400, 400), dtype=np.int8)
+    c2 = (clusterSize + 1) / 2
+    c3 = clusterSize
+    for iy in range(400):
+        for ix in range(400):
+            max_value = tl = tr = bl = br = tot = 0
+            # 0 - no photon, 1- photon,  2 - photon_max
+            ee = 0
+            for ir in range(-clusterSize // 2, clusterSize // 2 + 1):
+                for ic in range(-clusterSize // 2, clusterSize // 2 + 1):
+                    if (
+                        (iy + ir) >= 0
+                        and (iy + ir) < frame.shape[0]
+                        and (ix + ic) >= 0
+                        and (ix + ic) < frame.shape[1]
+                    ):
+                        v = frame[iy + ir, ix + ic]
+                        # consider non-negative values only
+                        v = max(v, 0)
+                        tot += v
+                        if ir <= 0 and ic <= 0:
+                            bl += v
+                        if ir <= 0 and ic >= 0:
+                            br += v
+                        if ir >= 0 and ic <= 0:
+                            tl += v
+                        if ir >= 0 and ic >= 0:
+                            tr += v
+                        if v > max_value:
+                            max_value = v
+                if max_value > cut_off_adu:
+                    ee = 1
+                    if frame[iy, ix] < max_value:
+                        continue
+                elif tot > c3 * cut_off_adu:
+                    ee = 1
+                elif max(bl, br, tl, tr) > c2 * cut_off_adu:
+                    ee = 1
+                if ee == 1 and frame[iy, ix] == max_value:
+                    ee == 2
+                    cluster_map[iy, ix] = 1
+    # return cluster_map
 
 
 # there is possibility to run the same code on the gpu, not tested

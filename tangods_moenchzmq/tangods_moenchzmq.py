@@ -7,7 +7,7 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
-from .proc_funcs.counting import getClustersSLS
+from .proc_funcs.counting import getClustersSLS, voidgetClustersSLS
 
 import sys
 import re
@@ -653,7 +653,7 @@ class MoenchZmqServer(Device):
                     self.PEDESTAL_FRAME_BUFFER_SIZE,
                     self.shared_memory_pedestals_indexes,
                     self.shared_memory_pedestals_buffer,
-                    self.shared_memory_pedestal,
+                    self.shared_pedestal_frames,
                 )
                 future = asyncio.wrap_future(future)
 
@@ -713,8 +713,9 @@ class MoenchZmqServer(Device):
         self.write_pumped_frames(0)
         self.max_frame_index.value = 0
 
-        self._empty_shared_array(self.shared_memory_single_frames)
-        for buffer in self.shared_memory_buffers:
+        # self._empty_shared_array(self.shared_memory_single_frames)
+        # 0 - is the pedestal, does not need to be reset each time...
+        for buffer in self.shared_memory_buffers[1:]:
             self._empty_shared_array(buffer)
         self.write_receive_frames(True)
         self.set_state(DevState.RUNNING)
@@ -867,11 +868,13 @@ class MoenchZmqServer(Device):
             self.SINGLE_FRAME_BUFFER_SIZE, dtype=np.int32
         ).nbytes
 
-        buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
+        # buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
 
-        self.shared_memory_single_frames = self._shared_memory_manager.SharedMemory(
-            size=buffer_bytes
+        self.shared_memory_single_frames = (
+            None  # = self._shared_memory_manager.SharedMemory(
         )
+        #    size=buffer_bytes
+        # )
         self.shared_memory_pedestals_buffer = self._shared_memory_manager.SharedMemory(
             size=pedestals_buffer_bytes
         )
@@ -971,16 +974,16 @@ class MoenchZmqServer(Device):
                         full_path_pumped += f"_{time_str}"
                     im_pumped.save(f"{full_path_pumped}.tiff")
 
-        single_frames = np.ndarray(
-            (10000, 400, 400),
-            dtype=np.uint16,
-            buffer=self.shared_memory_single_frames.buf,
-        )
-        single_frames_shorten = single_frames[: self.max_frame_index.value + 1]
-        single_frames_filename = f"{savepath}_{index}"
-        if path.isfile(f"{single_frames_filename}.npy"):
-            single_frames_filename += f"_{time_str}"
-        np.save(f"{single_frames_filename}.npy", single_frames_shorten)
+        # single_frames = np.ndarray(
+        #     (10000, 400, 400),
+        #     dtype=np.uint16,
+        #     buffer=self.shared_memory_single_frames.buf,
+        # )
+        # single_frames_shorten = single_frames[: self.max_frame_index.value + 1]
+        # single_frames_filename = f"{savepath}_{index}"
+        # if path.isfile(f"{single_frames_filename}.npy"):
+        #     single_frames_filename += f"_{time_str}"
+        # np.save(f"{single_frames_filename}.npy", single_frames_shorten)
         # if self.read_save_counting_img():
         #     im = Image.fromarray(self.read_analog_img())
         #     im.save(
@@ -1059,9 +1062,9 @@ def wrap_function(
     )
     raw = np.ndarray((400, 400), dtype=float, buffer=shared_memories[7].buf)
 
-    single_frame_buffer = np.ndarray(
-        (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
-    )
+    # single_frame_buffer = np.ndarray(
+    #     (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
+    # )
     indexes_buffer = np.ndarray(
         pedestals_buffer_size, dtype=np.int32, buffer=pedestal_indexes_shared_memory.buf
     )
@@ -1074,7 +1077,7 @@ def wrap_function(
     # variables assignments inside of lock
 
     max_file_index.value = max(max_file_index.value, frame_index)
-    single_frame_buffer[frame_index] = payload
+    # single_frame_buffer[frame_index] = payload
 
     print(f"Enter processing frame {frame_index}")
 
@@ -1117,7 +1120,11 @@ def wrap_function(
             print(f"th = {threshold.value}")
         if process_counting:
             print("Processing counting...")
-            clustered = getClustersSLS(no_ped)
+            cluster_map = np.zeros((400, 400), dtype=float)
+            voidgetClustersSLS(no_ped, cluster_map, counting_threshold.value)
+            clustered = cluster_map
+            del cluster_map
+            # clustered = getClustersSLS(no_ped, counting_threshold.value)
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:
