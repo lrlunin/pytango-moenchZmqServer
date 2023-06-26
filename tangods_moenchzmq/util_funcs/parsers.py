@@ -1,3 +1,6 @@
+import re
+
+
 def get_mods(session_list, types_return_order=["ped", "p", "up"]):
     return_array = [[] for _ in range(len(types_return_order))]
     for i, key in enumerate(session_list):
