@@ -1,16 +1,16 @@
 import asyncio
 import json
 import multiprocessing as mp
-from os import path, makedirs, listdir
+from os import path, makedirs
 import time
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
-from .proc_funcs.counting import getClustersSLS, voidgetClustersSLS
-
+from .proc_funcs.counting import getClustersSLS
+from .util_funcs.parsers import get_mods, is_string_a_valid_array, get_max_file_index
+from .util_funcs.buffers import push_to_buffer
 import sys
-import re
 import numpy as np
 from enum import IntEnum
 import zmq
@@ -36,6 +36,9 @@ class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
 
     processing_function = None
+    processing_pattern_string = ""
+    processing_indexes_array = []
+    processing_indexes_divisor = 1
 
     _manager = None
     _context = None
@@ -266,6 +269,14 @@ class MoenchZmqServer(Device):
         memorized=True,
         hw_memorized=True,
         doc="cut-off value for counting",
+    )
+    processing_pattern = attribute(
+        label="proc pattern",
+        dtype=str,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+        doc='desc of sequence of frames. possible vales "ped", "p" and "up" for pedestal, pumped and unpumped images respectively',
     )
 
     processed_frames = attribute(
@@ -530,8 +541,16 @@ class MoenchZmqServer(Device):
     def read_counting_threshold(self):
         return self.shared_counting_threshold.value
 
-    def read_processing_mode(self):
-        return self._processing_function_enum
+    def write_processing_pattern(self, value):
+        self.processing_pattern_string = value
+        if is_string_a_valid_array(value):
+            parsed_array = eval(value)
+            self.processing_indexes_divisor, self.processing_indexes_array = get_mods(
+                parsed_array
+            )
+
+    def read_processing_pattern(self):
+        return self.processing_pattern_string
 
     def write_processed_frames(self, value):
         # with self.shared_processed_frame.get_lock():
@@ -573,6 +592,10 @@ class MoenchZmqServer(Device):
 
     def write_split_pump(self, value):
         self._split_pump = bool(value)
+        if self._split_pump:
+            self.write_processing_pattern('["up", "p"]')
+        else:
+            self.write_processing_pattern('["up"]')
 
     def read_split_pump(self):
         return self._split_pump
@@ -629,9 +652,10 @@ class MoenchZmqServer(Device):
                 self.shared_received_frames.value += 1
                 # see in docs
                 # should be moved to each process to prevent performance bottleneck
-                future = self._process_pool.submit(
+                self._process_pool.submit(
                     wrap_function,
-                    self.shared_memory_single_frames,
+                    self.processing_indexes_divisor,
+                    self.processing_indexes_array,
                     self.max_frame_index,
                     [
                         self.read_process_pedestal_img(),
@@ -780,29 +804,6 @@ class MoenchZmqServer(Device):
         empty = np.zeros((400, 400), dtype=float)
         self.write_pedestal(empty)
 
-    def get_max_file_index(self, filepath, filename):
-        # full_file_name_like = 202301031_run_5_.....tiff
-        # get list of files in the directory
-        file_list = listdir(filepath)
-
-        # getting files which begin with the same filename
-        captures_list = list(
-            filter(lambda file_name: file_name.startswith(filename), file_list)
-        )
-        # if there is no files with this filename -> 0
-        if len(captures_list) == 0:
-            return 0
-        # if there is any file with the same filename
-        else:
-            # finding index with regexp while index is a decimal number which stays after "filename_"
-            # (\d*) - is an indented group 1
-            r = re.compile(rf"^{filename}_(\d+)")
-            # regex objects which match the upper statement
-            reg = filter(lambda item: item is not None, map(r.search, captures_list))
-            # getting max from the group 1 <=> index
-            max_index = max(map(lambda match: int(match.group(1)), reg))
-            return max_index
-
     def init_device(self):
         """Initial tangoDS setup"""
         Device.init_device(self)
@@ -831,9 +832,7 @@ class MoenchZmqServer(Device):
         date_formatted = datetime.today().strftime("%Y%m%d")
         self.write_filepath(f"{date_formatted}_run")
         self.write_filename(f"{date_formatted}_run")
-        max_file_index = self.get_max_file_index(
-            self.read_filepath(), self.read_filename()
-        )
+        max_file_index = get_max_file_index(self.read_filepath(), self.read_filename())
         self.write_file_index(max_file_index + 1)
 
         # using shared thread-safe Value instance from multiprocessing
@@ -1006,7 +1005,8 @@ class MoenchZmqServer(Device):
 
 
 def wrap_function(
-    buffer_shared_memory,
+    processing_indexes_divisor,
+    processing_indexes_array,
     max_file_index,
     use_modes,
     header,
@@ -1038,6 +1038,8 @@ def wrap_function(
     # ]
 
     process_pedestal, process_analog, process_threshold, process_counting = use_modes
+    pedestal_indexes, pumped_indexes, unpumped_indexes = processing_indexes_array
+    divisor = processing_indexes_divisor
     # get frame index from json header to determine the frame ordinal number
     frame_index = header.get("frameIndex")
     """
@@ -1083,11 +1085,15 @@ def wrap_function(
     # we need to classify the frame (is it new pedestal/pumped/unpumped) before the processing
     # later configurable with str array like sequence: [unpumped, ped, ped, ped, pumped, ped, ped, ped,]
     frametype = None
-    if split_pump:
-        if frame_index % 2 == 0:
-            frametype = FrameType.UNPUMPED
-        else:
-            frametype = FrameType.PUMPED
+    mod = None
+    if divisor != 0:
+        mod = frame_index % divisor
+    if mod in pedestal_indexes:
+        frametype = FrameType.PEDESTAL
+    elif mod in pumped_indexes:
+        frametype = FrameType.PUMPED
+    elif mod in unpumped_frames:
+        frametype = FrameType.UNPUMPED
     else:
         frametype = FrameType.UNPUMPED
     if process_pedestal:
@@ -1143,16 +1149,6 @@ def wrap_function(
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
     lock.release()
-
-
-def push_to_buffer(
-    indexes_array, pedestal_array, new_index, new_ped, pedestal, buf_size
-):
-    arg_min = np.argmin(indexes_array)
-    old_data = np.copy(pedestal_array[arg_min])
-    indexes_array[arg_min] = new_index
-    pedestal_array[arg_min] = new_ped
-    pedestal[:] = pedestal - old_data / buf_size + new_ped / buf_size
 
 
 if __name__ == "__main__":
