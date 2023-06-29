@@ -36,7 +36,7 @@ def get_max_file_index(filepath, filename):
     else:
         # finding index with regexp while index is a decimal number which stays after "filename_"
         # (\d*) - is an indented group 1
-        r = re.compile(rf"^{filename}_(\d+)")
+        r = re.compile(rf"^{filename}_(\d+).nxs$")
         # regex objects which match the upper statement
         reg = filter(lambda item: item is not None, map(r.search, captures_list))
         # getting max from the group 1 <=> index

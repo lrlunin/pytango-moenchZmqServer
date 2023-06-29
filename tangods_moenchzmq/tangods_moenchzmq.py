@@ -1,11 +1,12 @@
 import asyncio
 import json
 import multiprocessing as mp
+from nexusformat.nexus import *
+
 from os import path, makedirs
 import time
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import shared_memory as sm
 from multiprocessing.managers import SharedMemoryManager
 from .proc_funcs.counting import getClustersSLS
 from .util_funcs.parsers import get_mods, is_string_a_valid_array, get_max_file_index
@@ -91,10 +92,6 @@ class MoenchZmqServer(Device):
 
     # reorder table for frame
     reorder_table = None
-
-    _save_analog_img = True
-    _save_threshold_img = True
-    _save_counting_img = True
 
     _filename = ""
     _filepath = ""
@@ -362,33 +359,6 @@ class MoenchZmqServer(Device):
         doc="process counting while acquisition",
     )
 
-    save_analog_img = attribute(
-        label="save analog",
-        dtype=bool,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        doc="save analog .tiff file after acquisition",
-    )
-
-    save_threshold_img = attribute(
-        label="save threshold",
-        dtype=bool,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        doc="save threshold .tiff file after acquisition",
-    )
-
-    save_counting_img = attribute(
-        label="save counting",
-        dtype=bool,
-        access=AttrWriteType.READ_WRITE,
-        memorized=True,
-        hw_memorized=True,
-        doc="save counting .tiff file after acquisition",
-    )
-
     def write_filename(self, value):
         self._filename = value
 
@@ -621,26 +591,6 @@ class MoenchZmqServer(Device):
     def read_process_counting_img(self):
         return self._process_counting_img
 
-    def write_save_analog_img(self, value):
-        self._save_analog_img = value
-
-    def read_save_analog_img(self):
-        return self._save_analog_img
-
-    def write_save_threshold_img(self, value):
-        self._save_threshold_img = value
-
-    def read_save_threshold_img(self):
-        return self._save_threshold_img
-
-    def write_save_counting_img(self, value):
-        self._save_counting_img = value
-
-    def read_save_counting_img(self):
-        return self._save_counting_img
-
-    # when processing is ready -> self.push_change_event(self, "analog_img"/"counting_img"/"threshold_img")
-
     async def main(self):
         while True:
             header, payload = await self.get_msg_pair()
@@ -779,7 +729,7 @@ class MoenchZmqServer(Device):
                 )
         # HERE ALL POST HOOKS
         self.update_images_events()
-        self.save_files()
+        self.save_nexus_file()
         index = self.read_file_index()
         self.write_file_index(index + 1)
         self.set_state(DevState.ON)
@@ -913,75 +863,43 @@ class MoenchZmqServer(Device):
             # call corresponding read_... functions with eval(...) instead of write it for each function call
             self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
 
-    # save files on disk for pictures buffers
-    def save_files(self):
-        """Function for saving the buffered images in .tiff format.
-        The files will have different postfixes depending on processing mode.
-
-        Args:
-            path (str): folder to save
-            filename (str): name to save
-            index (str): capture index
-        """
+    def save_nexus_file(self):
         filepath = self.read_filepath()
         filename = self.read_filename()
         index = self.read_file_index()
+        datetime_now = datetime.now()
         # need to be refactored soon
-        savepath = path.join(filepath, filename)
-        time_str = datetime.now().strftime("%H:%M:%S")
+        field_names = self._IMG_ATTR
+        images = np.zeros((len(field_names), 400, 400))
+        for i, attr in enumerate(field_names):
+            images[i] = eval(f"self.read_{attr}()")
+        # file will be saved like
+        savepath = path.join(filepath, f"{filename}_{index}")
 
-        if self.read_process_pedestal_img():
-            im = Image.fromarray(self.read_pedestal())
-            full_path_pedestal = f"{savepath}_{index}_pedestal"
-            if path.isfile(f"{full_path_pedestal}.tiff"):
-                full_path_pedestal += f"_{time_str}"
-            im.save(f"{full_path_pedestal}.tiff")
-        else:
-            if self.read_process_analog_img() and self.read_save_analog_img():
-                im = Image.fromarray(self.read_analog_img())
-                full_path_unpumped = f"{savepath}_{index}_analog"
+        data = NXdata(signal=images, axes=field_names)
+        # needs to include exposure time etc
+        metadata_attributes = [
+            "normalize",
+            "threshold",
+            "counting_threshold",
+            "processing_pattern",
+            "processed_frames",
+            "unpumped_frames",
+            "pumped_frames",
+            "pedestal_frames",
+        ]
+        metadata_dict = {"end_time": datetime_now.isoformat()}
+        for attr in metadata_attributes:
+            metadata_dict[attr] = eval(f"self.read_{attr}()")
 
-                if path.isfile(f"{full_path_unpumped}.tiff"):
-                    full_path_unpumped += f"_{time_str}"
-                im.save(f"{full_path_unpumped}.tiff")
-                if self.read_split_pump():
-                    im_pumped = Image.fromarray(self.read_analog_img_pumped())
-                    full_path_pumped = f"{savepath}_{index}_analog_pumped"
-                    if path.isfile(f"{full_path_pumped}.tiff"):
-                        full_path_pumped += f"_{time_str}"
-                    im_pumped.save(f"{full_path_pumped}.tiff")
-
-            if self.read_process_threshold_img() and self.read_save_threshold_img():
-                threshold = self.read_threshold()
-                im = Image.fromarray(self.read_threshold_img())
-                full_path_unpumped = f"{savepath}_{index}_threshold_{threshold}"
-                if path.isfile(f"{full_path_unpumped}.tiff"):
-                    full_path_unpumped += f"_{time_str}"
-                im.save(f"{full_path_unpumped}.tiff")
-                if self.read_split_pump():
-                    im_pumped = Image.fromarray(self.read_threshold_img_pumped())
-                    full_path_pumped = (
-                        f"{savepath}_{index}_threshold_{threshold}_pumped"
-                    )
-                    if path.isfile(f"{full_path_pumped}.tiff"):
-                        full_path_pumped += f"_{time_str}"
-                    im_pumped.save(f"{full_path_pumped}.tiff")
-
-        # single_frames = np.ndarray(
-        #     (10000, 400, 400),
-        #     dtype=np.uint16,
-        #     buffer=self.shared_memory_single_frames.buf,
-        # )
-        # single_frames_shorten = single_frames[: self.max_frame_index.value + 1]
-        # single_frames_filename = f"{savepath}_{index}"
-        # if path.isfile(f"{single_frames_filename}.npy"):
-        #     single_frames_filename += f"_{time_str}"
-        # np.save(f"{single_frames_filename}.npy", single_frames_shorten)
-        # if self.read_save_counting_img():
-        #     im = Image.fromarray(self.read_analog_img())
-        #     im.save(
-        #         f"{savepath}_{index}_counting_{self.read_counting_threshold()}.tiff"
-        #     )
+        metadata = NXcollection(entries=metadata_dict)
+        metadata["threshold"].units = "ADU"
+        metadata["counting_threshold"].units = "ADU"
+        entry = NXentry(name=f"entry{index}", data=data, metadata=metadata)
+        if path.isfile(f"{savepath}.nxs"):
+            time_str = datetime_now.strftime("%H:%M:%S")
+            savepath += f"_{time_str}"
+        entry.save(f"{savepath}.nxs")
 
     def _init_zmq_socket(self, zmq_ip: str, zmq_port: str):
         endpoint = f"tcp://{zmq_ip}:{zmq_port}"
