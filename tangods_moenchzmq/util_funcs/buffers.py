@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def push_to_buffer(
     indexes_array, pedestal_array, new_index, new_ped, pedestal, buf_size
 ):

@@ -128,9 +128,6 @@ class MoenchZmqServer(Device):
         doc="folder to save in",
         default_value="/mnt/LocalData/DATA/MOENCH",
     )
-    SINGLE_FRAME_BUFFER_SIZE = device_property(
-        dtype=int, doc="how much single frames can be stored", default_value=10000
-    )
     PEDESTAL_FRAME_BUFFER_SIZE = device_property(
         dtype=int,
         doc="length of buffer for pedestal moving average",
@@ -671,7 +668,6 @@ class MoenchZmqServer(Device):
                     self.shared_processed_frames,
                     self.shared_threshold,
                     self.shared_counting_threshold,
-                    self.read_split_pump(),
                     self.shared_unpumped_frames,
                     self.shared_pumped_frames,
                     self.PEDESTAL_FRAME_BUFFER_SIZE,
@@ -858,12 +854,11 @@ class MoenchZmqServer(Device):
             self.shared_memory_buffers.append(
                 self._shared_memory_manager.SharedMemory(size=img_bytes)
             )
-
         pedestals_buffer_bytes = np.zeros(
             [self.PEDESTAL_FRAME_BUFFER_SIZE, 400, 400], dtype=np.uint16
         ).nbytes
         indexes_buffer_bytes = np.zeros(
-            self.SINGLE_FRAME_BUFFER_SIZE, dtype=np.int32
+            self.PEDESTAL_FRAME_BUFFER_SIZE, dtype=np.int32
         ).nbytes
 
         # buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
@@ -880,11 +875,11 @@ class MoenchZmqServer(Device):
             size=indexes_buffer_bytes
         )
         indexes_array = np.ndarray(
-            self.SINGLE_FRAME_BUFFER_SIZE,
+            self.PEDESTAL_FRAME_BUFFER_SIZE,
             dtype=np.int32,
             buffer=self.shared_memory_pedestals_indexes.buf,
         )
-        indexes_array[:] = -np.arange(self.SINGLE_FRAME_BUFFER_SIZE) - 1
+        indexes_array[:] = -np.arange(self.PEDESTAL_FRAME_BUFFER_SIZE) - 1
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
 
@@ -1017,7 +1012,6 @@ def wrap_function(
     processed_frames,
     threshold,
     counting_threshold,
-    split_pump,
     unpumped_frames,
     pumped_frames,
     pedestals_buffer_size,
@@ -1062,7 +1056,6 @@ def wrap_function(
         (400, 400), dtype=float, buffer=shared_memories[6].buf
     )
     raw = np.ndarray((400, 400), dtype=float, buffer=shared_memories[7].buf)
-
     # single_frame_buffer = np.ndarray(
     #     (10000, 400, 400), dtype=np.uint16, buffer=buffer_shared_memory.buf
     # )
@@ -1092,7 +1085,7 @@ def wrap_function(
         frametype = FrameType.PEDESTAL
     elif mod in pumped_indexes:
         frametype = FrameType.PUMPED
-    elif mod in unpumped_frames:
+    elif mod in unpumped_indexes:
         frametype = FrameType.UNPUMPED
     else:
         frametype = FrameType.UNPUMPED
