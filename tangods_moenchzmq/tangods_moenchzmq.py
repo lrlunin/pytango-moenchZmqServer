@@ -4,7 +4,7 @@ import multiprocessing as mp
 from nexusformat.nexus import *
 
 from os import path, makedirs
-import time
+import time, shutil
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import SharedMemoryManager
@@ -142,6 +142,13 @@ class MoenchZmqServer(Device):
         dtype=str,
         access=AttrWriteType.READ_WRITE,
         doc="dir where data files will be written",
+    )
+    space_available = attribute(
+        label="space left at selected filepath",
+        unit="GB",
+        dtype=float,
+        access=AttrWriteType.READ,
+        doc="space left on the device used for save",
     )
     file_index = attribute(
         label="next file index",
@@ -381,6 +388,18 @@ class MoenchZmqServer(Device):
 
     def read_filepath(self):
         return self._filepath
+
+    def write_space_available(self, value):
+        pass
+
+    def read_space_available(self):
+        filepath = self.read_filepath()
+        result = 0
+        if path.isdir(filepath):
+            total, used, free = shutil.disk_usage(filepath)
+            # conversion to GiB
+            result = free / 2**30
+        return result
 
     def write_file_index(self, value):
         self._file_index = value
@@ -908,6 +927,7 @@ class MoenchZmqServer(Device):
         print(f"Connecting to: {endpoint}")
         self._socket.connect(endpoint)
         self._socket.setsockopt(zmq.SUBSCRIBE, b"")
+        # self._socket.set_hwm(1000)
         hwm = self._socket.get_hwm()
         print(f"HWM of the socket = {hwm}")
 
