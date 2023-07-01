@@ -16,7 +16,6 @@ import numpy as np
 from enum import IntEnum
 import zmq
 import zmq.asyncio
-from PIL import Image
 from tango import AttrDataFormat, AttrWriteType, DevState, DispLevel, GreenMode, Except
 from tango.server import (
     Device,
@@ -610,6 +609,14 @@ class MoenchZmqServer(Device):
     def read_process_counting_img(self):
         return self._process_counting_img
 
+    def update_from_event(self):
+        print("Created update from event thread")
+        while True:
+            self._event.wait()
+            print("event updated")
+            self.update_images_events()
+            self._event.clear()
+
     async def main(self):
         while True:
             header, payload = await self.get_msg_pair()
@@ -643,6 +650,7 @@ class MoenchZmqServer(Device):
                     self.shared_memory_pedestals_indexes,
                     self.shared_memory_pedestals_buffer,
                     self.shared_pedestal_frames,
+                    self._event,
                 )
 
     async def get_msg_pair(self):
@@ -780,6 +788,8 @@ class MoenchZmqServer(Device):
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
         self._lock = self._manager.Lock()
+        self._event = self._manager.Event()
+        self._event.clear()
         # extra pedestal lock for pedestal evaluation
         self._pedestal_lock = self._manager.Lock()
 
@@ -856,6 +866,7 @@ class MoenchZmqServer(Device):
         self._init_zmq_socket(zmq_ip, zmq_port)
         loop = asyncio.get_event_loop()
         loop.create_task(self.main())
+        loop.run_in_executor(None, self.update_from_event)
 
         # assigning the previews for the images (just for fun)
         save_folder = "default_images"
@@ -956,6 +967,7 @@ def wrap_function(
     pedestal_indexes_shared_memory,
     pedestal_buffer_shared_memory,
     pedestal_frames_amount,
+    event,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -1076,6 +1088,12 @@ def wrap_function(
                 counting_img_pumped += clustered
             pumped_frames.value += 1
     processed_frames.value += 1
+    if frame_index % 15 == 0:
+        event.set()
+        # is actually not necessary, isn't it?
+        # is it possible that update_from_event will update the image after finish in
+        # concurrent race and will update an old image?
+        event.wait()
     raw += payload
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
