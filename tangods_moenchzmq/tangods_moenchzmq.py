@@ -96,7 +96,7 @@ class MoenchZmqServer(Device):
     _filepath = ""
     _file_index = 0
     _normalize = True
-
+    _update_period = 0
     _abort_await = False
 
     ZMQ_RX_IP = device_property(
@@ -278,7 +278,14 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc='desc of sequence of frames. possible vales "ped", "p" and "up" for pedestal, pumped and unpumped images respectively',
     )
-
+    update_period = attribute(
+        label="live period",
+        unit="frames",
+        dtype=int,
+        min_value=0,
+        access=AttrWriteType.READ_WRITE,
+        doc="push event each N frames. if 0 - no live updates",
+    )
     processed_frames = attribute(
         label="proc frames",
         dtype=int,
@@ -537,6 +544,12 @@ class MoenchZmqServer(Device):
     def read_processing_pattern(self):
         return self.processing_pattern_string
 
+    def write_update_period(self, value):
+        self._update_period = value
+
+    def read_update_period(self):
+        return self._update_period
+
     def write_processed_frames(self, value):
         # with self.shared_processed_frame.get_lock():
         self.shared_processed_frames.value = value
@@ -651,6 +664,7 @@ class MoenchZmqServer(Device):
                     self.shared_memory_pedestals_buffer,
                     self.shared_pedestal_frames,
                     self._event,
+                    self._update_period,
                 )
 
     async def get_msg_pair(self):
@@ -968,6 +982,7 @@ def wrap_function(
     pedestal_buffer_shared_memory,
     pedestal_frames_amount,
     event,
+    update_period,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -1088,7 +1103,7 @@ def wrap_function(
                 counting_img_pumped += clustered
             pumped_frames.value += 1
     processed_frames.value += 1
-    if frame_index % 15 == 0:
+    if update_period != 0 and frame_index % update_period == 0:
         event.set()
         # is actually not necessary, isn't it?
         # is it possible that update_from_event will update the image after finish in
