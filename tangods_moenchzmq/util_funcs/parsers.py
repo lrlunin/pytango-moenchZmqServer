@@ -1,5 +1,7 @@
 import re
 import os
+from os import path, makedirs, remove
+from nexusformat.nexus import *
 
 
 def get_mods(session_list, types_return_order=["ped", "p", "up"]):
@@ -42,3 +44,31 @@ def get_max_file_index(filepath, filename):
         # getting max from the group 1 <=> index
         max_index = max(map(lambda match: int(match.group(1)), reg))
         return max_index
+
+
+def create_temp_folder(savepath, temp_folder="temp"):
+    if path.isdir(savepath):
+        temp_path = path.join(savepath, temp_folder)
+        if not path.isdir(temp_path):
+            try:
+                makedirs(temp_path)
+            except OSError:
+                pass
+        return temp_path
+
+
+def stack_partial_into_single(save_folder, temp_folder, fileindex):
+    pattern = rf"^fileindex-{fileindex}-frameindex-(\d+).nxs$"
+    r = re.compile(pattern)
+    files = os.listdir(temp_folder)
+    main_entry = NXentry(name=f"fileindex{fileindex}")
+    for file in files:
+        if re.match(pattern, file):
+            frame_index = r.search(file).group(1)
+            full_file_path = path.join(temp_folder, file)
+            entry_name = f"frame{frame_index}"
+            frame_entry = nxload(full_file_path)[entry_name]
+            main_entry[entry_name] = frame_entry
+            os.remove(full_file_path)
+    full_save_path = path.join(save_folder, f"all-frames-{fileindex}.nxs")
+    main_entry.save(full_save_path)

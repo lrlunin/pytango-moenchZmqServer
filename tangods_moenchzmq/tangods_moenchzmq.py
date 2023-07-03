@@ -9,7 +9,7 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import SharedMemoryManager
 from .proc_funcs.counting import getClustersSLS
-from .util_funcs.parsers import get_mods, is_string_a_valid_array, get_max_file_index
+from .util_funcs.parsers import *
 from .util_funcs.buffers import push_to_buffer
 import sys
 import numpy as np
@@ -36,9 +36,11 @@ class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
 
     processing_function = None
-    processing_pattern_string = ""
+    processing_pattern_string = '["up"]'
     processing_indexes_array = []
     processing_indexes_divisor = 1
+    _save_separate_frames = False
+    _temp_path = ""
 
     _manager = None
     _context = None
@@ -72,7 +74,6 @@ class MoenchZmqServer(Device):
     shared_memory_raw_img = None
 
     shared_memory_single_frames = None
-    max_frame_index = None
 
     # shared scalar values
     shared_threshold = None
@@ -372,6 +373,21 @@ class MoenchZmqServer(Device):
         doc="process counting while acquisition",
     )
 
+    save_separate_frames = attribute(
+        label="save frames ind-ly",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+    )
+
+    temp_filepath = attribute(
+        display_level=DispLevel.EXPERT,
+        label="temp path for seperate frames",
+        dtype=str,
+        access=AttrWriteType.READ_WRITE,
+    )
+
     def write_filename(self, value):
         self._filename = value
 
@@ -622,6 +638,18 @@ class MoenchZmqServer(Device):
     def read_process_counting_img(self):
         return self._process_counting_img
 
+    def write_save_separate_frames(self, value):
+        self._save_separate_frames = value
+
+    def read_save_separate_frames(self):
+        return self._save_separate_frames
+
+    def write_temp_filepath(self, value):
+        self._temp_filepath = value
+
+    def read_temp_filepath(self):
+        return self._temp_filepath
+
     def update_from_event(self):
         print("Created update from event thread")
         while True:
@@ -642,7 +670,6 @@ class MoenchZmqServer(Device):
                     wrap_function,
                     self.processing_indexes_divisor,
                     self.processing_indexes_array,
-                    self.max_frame_index,
                     [
                         self.read_process_pedestal_img(),
                         self.read_process_analog_img(),
@@ -665,6 +692,9 @@ class MoenchZmqServer(Device):
                     self.shared_pedestal_frames,
                     self._event,
                     self._update_period,
+                    self._save_separate_frames,
+                    self._file_index,
+                    self._temp_filepath,
                 )
 
     async def get_msg_pair(self):
@@ -721,7 +751,6 @@ class MoenchZmqServer(Device):
         self.write_received_frames(0)
         self.write_unpumped_frames(0)
         self.write_pumped_frames(0)
-        self.max_frame_index.value = 0
 
         # self._empty_shared_array(self.shared_memory_single_frames)
         # 0 - is the pedestal, does not need to be reset each time...
@@ -836,8 +865,6 @@ class MoenchZmqServer(Device):
         self.shared_amount_frames = self._manager.Value("I", 0)
         self.shared_split_pump = self._manager.Value("b", 0)
 
-        self.max_frame_index = self._manager.Value("I", 0)
-
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros((400, 400), dtype=float).nbytes
         # allocating 1x400x400 arrays for images
@@ -894,7 +921,7 @@ class MoenchZmqServer(Device):
                     np.load(path.join(prefix, save_folder, f"{mode}_{pump_state}.npy")),
                 )
                 index += 1
-
+        self.write_temp_filepath(create_temp_folder(self.read_filepath()))
         # initialization of tango events for pictures buffers
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
@@ -965,7 +992,6 @@ class MoenchZmqServer(Device):
 def wrap_function(
     processing_indexes_divisor,
     processing_indexes_array,
-    max_file_index,
     use_modes,
     header,
     payload,
@@ -983,6 +1009,9 @@ def wrap_function(
     pedestal_frames_amount,
     event,
     update_period,
+    save_separate_frames,
+    fileindex,
+    temp_filepath,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -1035,9 +1064,6 @@ def wrap_function(
     # calculations oustide of lock
     # variables assignments inside of lock
 
-    max_file_index.value = max(max_file_index.value, frame_index)
-    # single_frame_buffer[frame_index] = payload
-
     print(f"Enter processing frame {frame_index}")
 
     # we need to classify the frame (is it new pedestal/pumped/unpumped) before the processing
@@ -1072,8 +1098,9 @@ def wrap_function(
         print("quit pedesal lock")
     else:
         pedestal_lock.acquire()
-        no_ped = payload_copy - pedestal
+        pedestal_copy = np.copy(pedestal)
         pedestal_lock.release()
+        no_ped = payload_copy - pedestal_copy
         if process_analog:
             pass
             print("Processing analog...")
@@ -1113,6 +1140,28 @@ def wrap_function(
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
     lock.release()
+    if save_separate_frames:
+        axes = ["raw", "pedestal"]
+        images = [payload_copy, pedestal_copy]
+        if frametype is not FrameType.PEDESTAL:
+            if process_analog:
+                axes.append("analog")
+                images.append(no_ped)
+            if process_threshold:
+                axes.append("thresholded")
+                images.append(thresholded)
+            if process_counting:
+                axes.append("clustered")
+                images.append(clustered)
+            images = np.array(images)
+        metadata_dict = {"frame_index": frame_index, "frame_type": frametype.name}
+        data = NXdata(signal=images, axes=axes)
+        metadata = NXcollection(entries=metadata_dict)
+        entry = NXentry(name=f"frame{frame_index}", data=data, metadata=metadata)
+        filename = path.join(
+            temp_filepath, f"fileindex-{fileindex}-frameindex-{frame_index}.nxs"
+        )
+        entry.save(filename)
 
 
 if __name__ == "__main__":
