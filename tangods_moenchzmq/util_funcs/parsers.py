@@ -57,11 +57,11 @@ def create_temp_folder(savepath, temp_folder="temp"):
         return temp_path
 
 
-def stack_partial_into_single(save_folder, temp_folder, fileindex):
-    pattern = rf"^fileindex-{fileindex}-frameindex-(\d+).nxs$"
+def stack_partial_into_single(save_folder, temp_folder, filename, file_index):
+    pattern = rf"^fileindex-{file_index}-frameindex-(\d+).nxs$"
     r = re.compile(pattern)
     files = os.listdir(temp_folder)
-    main_entry = NXentry(name=f"fileindex{fileindex}")
+    main_entry = NXentry(name=f"fileindex{file_index}")
     for file in files:
         if re.match(pattern, file):
             frame_index = r.search(file).group(1)
@@ -70,5 +70,5 @@ def stack_partial_into_single(save_folder, temp_folder, fileindex):
             frame_entry = nxload(full_file_path)[entry_name]
             main_entry[entry_name] = frame_entry
             os.remove(full_file_path)
-    full_save_path = path.join(save_folder, f"all-frames-{fileindex}.nxs")
+    full_save_path = path.join(save_folder, f"{filename}_{file_index}_all_frames.nxs")
     main_entry.save(full_save_path)

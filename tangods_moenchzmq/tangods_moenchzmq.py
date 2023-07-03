@@ -800,8 +800,13 @@ class MoenchZmqServer(Device):
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_nexus_file()
-        index = self.read_file_index()
-        self.write_file_index(index + 1)
+        file_index = self.read_file_index()
+        if self.read_save_separate_frames():
+            filepath = self.read_filepath()
+            temp_folder = self.read_temp_filepath()
+            filename = self.read_filename()
+            stack_partial_into_single(filepath, temp_folder, filename, file_index)
+        self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
 
     @command
