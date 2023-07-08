@@ -760,8 +760,10 @@ class MoenchZmqServer(Device):
         self.set_state(DevState.RUNNING)
 
     async def async_stop_receiver(self, received_frames):
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.block_stop_receiver, received_frames)
+        asyncio.set_event_loop(self.functions_loop)
+        await self.functions_loop.run_in_executor(
+            None, self.block_stop_receiver, received_frames
+        )
 
     def block_stop_receiver(self, received_frames_at_the_time):
         self.write_receive_frames(False)
@@ -805,7 +807,14 @@ class MoenchZmqServer(Device):
             filepath = self.read_filepath()
             temp_folder = self.read_temp_filepath()
             filename = self.read_filename()
-            stack_partial_into_single(filepath, temp_folder, filename, file_index)
+            self.save_loop.run_in_executor(
+                None,
+                stack_partial_into_single,
+                filepath,
+                temp_folder,
+                filename,
+                file_index,
+            )
         self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
 
@@ -813,8 +822,10 @@ class MoenchZmqServer(Device):
     async def stop_receiver(self):
         received_frames = self.shared_received_frames.value
         print(f"received {received_frames} frames")
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.async_stop_receiver(received_frames))
+        asyncio.set_event_loop(self.functions_loop)
+        self.functions_loop.run_in_executor(
+            None, self.block_stop_receiver, received_frames
+        )
 
     @command
     def abort_receiver(self):
@@ -910,9 +921,12 @@ class MoenchZmqServer(Device):
 
         # creating and initialing socket to read from
         self._init_zmq_socket(zmq_ip, zmq_port)
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.main())
-        loop.run_in_executor(None, self.update_from_event)
+        self.main_loop = asyncio.new_event_loop()
+        self.functions_loop = asyncio.new_event_loop()
+        self.save_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.main_loop)
+        asyncio.create_task(self.main())
+        # loop.run_in_executor(None, self.update_from_event)
 
         # assigning the previews for the images (just for fun)
         save_folder = "default_images"
