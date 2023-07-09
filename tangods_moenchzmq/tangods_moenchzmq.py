@@ -4,7 +4,7 @@ import multiprocessing as mp
 from nexusformat.nexus import *
 
 from os import path, makedirs
-import time, shutil
+import time, shutil, threading
 from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import SharedMemoryManager
@@ -807,14 +807,16 @@ class MoenchZmqServer(Device):
             filepath = self.read_filepath()
             temp_folder = self.read_temp_filepath()
             filename = self.read_filename()
-            self.save_loop.run_in_executor(
-                None,
-                stack_partial_into_single,
-                filepath,
-                temp_folder,
-                filename,
-                file_index,
-            )
+            threading.Thread(
+                daemon=True,
+                target=stack_partial_into_single,
+                args=(
+                    filepath,
+                    temp_folder,
+                    filename,
+                    file_index,
+                ),
+            ).start()
         self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
 
@@ -923,10 +925,11 @@ class MoenchZmqServer(Device):
         self._init_zmq_socket(zmq_ip, zmq_port)
         self.main_loop = asyncio.new_event_loop()
         self.functions_loop = asyncio.new_event_loop()
+        self.event_loop = asyncio.new_event_loop()
         self.save_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.main_loop)
         asyncio.create_task(self.main())
-        # loop.run_in_executor(None, self.update_from_event)
+        self.event_loop.run_in_executor(None, self.update_from_event)
 
         # assigning the previews for the images (just for fun)
         save_folder = "default_images"
