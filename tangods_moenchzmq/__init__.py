@@ -1,4 +1,4 @@
-from .tangods_moenchzmq import MoenchZmqServer
+from .tangods_moenchzmq_server import MoenchZmqServer
 
 # unfortunately we are not able to call the run_server of the MoenchZmqServer class directly
 # because even in case of static functions we are not able to call them if they belong to the class

@@ -1,5 +1,5 @@
-from ..util_funcs.buffers import push_to_buffer
-from .counting import getClustersSLS
+from tangods_moenchzmq.util_funcs.buffers import push_to_buffer
+from tangods_moenchzmq.proc_funcs.counting import getClustersSLS
 
 import numpy as np
 from enum import IntEnum

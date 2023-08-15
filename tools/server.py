@@ -5,7 +5,7 @@ import numpy as np
 
 context = zmq.Context()
 socket = context.socket(zmq.PUB)
-socket.bind("tcp://192.168.2.200:50003")
+socket.bind("tcp://127.0.0.1:50003")
 
 reorder_table = np.load("reorder_tables/moench03.npy")
 inverse_table = np.argsort(reorder_table.flatten())

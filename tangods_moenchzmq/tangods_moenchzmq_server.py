@@ -1,6 +1,6 @@
-from .util_funcs.parsers import *
-from .util_funcs.buffers import *
-from .proc_funcs.processing import processing_function
+from tangods_moenchzmq.util_funcs.parsers import *
+from tangods_moenchzmq.util_funcs.buffers import *
+from tangods_moenchzmq.proc_funcs.processing import processing_function
 
 import asyncio
 import json
@@ -935,4 +935,5 @@ class MoenchZmqServer(Device):
 
 
 if __name__ == "__main__":
-    run((MoenchZmqServer,))
+    args = ["MoenchZmqServer"] + sys.argv[1:]
+    run((MoenchZmqServer,), args=args)
