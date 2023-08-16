@@ -6,6 +6,7 @@ import asyncio
 import json
 import multiprocessing as mp
 from nexusformat.nexus import *
+from readerwriterlock import rwlock
 
 from os import path, makedirs
 import time, shutil, threading
@@ -634,7 +635,8 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
-                    self._pedestal_lock,
+                    self._readlock,
+                    self._writelock,
                     self.shared_memory_buffers,
                     self.shared_processed_frames,
                     self.shared_threshold,
@@ -870,6 +872,9 @@ class MoenchZmqServer(Device):
         # initialization of tango events for pictures buffers
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
+        
+        rlock = rwlock.RWLockWrite(self._manager.Lock)
+        self._readlock, self._writelock = rlock.gen_rlock(), rlock.gen_wlock()
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers

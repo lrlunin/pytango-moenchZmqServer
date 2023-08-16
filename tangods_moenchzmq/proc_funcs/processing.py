@@ -20,7 +20,8 @@ def processing_function(
     header,
     payload,
     lock,
-    pedestal_lock,
+    pedestal_rlock,
+    pedestal_wlock,
     shared_memories,
     processed_frames,
     threshold,
@@ -104,7 +105,7 @@ def processing_function(
     if process_pedestal:
         frametype = FrameType.PEDESTAL
     if frametype is FrameType.PEDESTAL:
-        pedestal_lock.acquire()
+        pedestal_wlock.acquire()
         print("enter pedestal lock")
         push_to_buffer(
             indexes_buffer,
@@ -115,12 +116,12 @@ def processing_function(
             pedestals_buffer_size,
         )
         pedestal_frames_amount.value += 1
-        pedestal_lock.release()
+        pedestal_wlock.release()
         print("quit pedesal lock")
     else:
-        pedestal_lock.acquire()
+        pedestal_rlock.acquire()
         pedestal_copy = np.copy(pedestal)
-        pedestal_lock.release()
+        pedestal_rlock.release()
         analog = payload_copy - pedestal_copy
         if process_analog:
             pass
