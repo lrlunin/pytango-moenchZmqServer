@@ -7,6 +7,7 @@ import json
 import multiprocessing as mp
 from nexusformat.nexus import *
 from readerwriterlock import rwlock
+from importlib.resources import files
 
 from os import path, makedirs
 import time, shutil, threading
@@ -771,8 +772,9 @@ class MoenchZmqServer(Device):
         Device.init_device(self)
         self.set_state(DevState.INIT)
         self.get_device_properties(self.get_device_class())
-        prefix = sys.prefix
-        self.reorder_table = np.load(path.join(prefix, "reorder_tables/moench03.npy"))
+        self.reorder_table = np.load(
+            files("tangods_moenchzmq.reorder_tables").joinpath("moench03.npy")
+        )
         # sync manager for synchronization between threads
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
@@ -865,14 +867,18 @@ class MoenchZmqServer(Device):
             for pump_state in pump_states:
                 write_shared_array(
                     self.shared_memory_buffers[index],
-                    np.load(path.join(prefix, save_folder, f"{mode}_{pump_state}.npy")),
+                    np.load(
+                        files("tangods_moenchzmq.default_images").joinpath(
+                            f"{mode}_{pump_state}.npy"
+                        )
+                    ),
                 )
                 index += 1
         self.write_temp_filepath(create_temp_folder(self.read_filepath()))
         # initialization of tango events for pictures buffers
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
-        
+
         rlock = rwlock.RWLockWrite(self._manager.Lock)
         self._readlock, self._writelock = rlock.gen_rlock(), rlock.gen_wlock()
         self.set_state(DevState.ON)

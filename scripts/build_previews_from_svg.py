@@ -9,7 +9,7 @@ import io
 dir = path.dirname(__file__)
 
 time = datetime.now()
-save_folder = "default_images"
+save_folder = "tangods_moenchzmq/default_images"
 modes = ["ANALOG", "THRESHOLD", "COUNTING"]
 pump_states = ["PUMPED", "UNPUMPED"]
 

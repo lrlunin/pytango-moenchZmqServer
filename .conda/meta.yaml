@@ -1,8 +1,8 @@
-{% set data = load_setup_py_data(setup_file='../setup.py', from_recipe_dir=True) %}
+{% set version = load_file_regex(load_file='VERSION', regex_pattern='^[0-9.]+$') %}
 
 package:
   name: tangods_moenchzmq
-  version: {{ data.get('version') }}
+  version: {{ version.string }}
 
 source:
   path: ../
@@ -13,7 +13,7 @@ build:
   script: "{{ PYTHON }} -m pip install . -vv --no-deps"
   number: 0
 requirements:
-  build:
+  host:
     - python
     - setuptools
   run:
@@ -23,7 +23,7 @@ requirements:
     - pyzmq>=23.2.0
     - numba>=0.57
     - nexusformat>=1.0.2
-    # add pip https://github.com/lrlunin/pyReaderWriterLock for RWLock
+    - readerwriterlock>=1.0.9
 
 about:
   home: https://github.com/lrlunin/pytango-moenchZmqServer

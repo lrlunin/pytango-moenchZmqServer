@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tangods_moenchzmq"
+description = "processing ZMQ server for a moench detector with tango DeviceServer"
+keywords = ["tango device", "tango", "pytango", "moench"]
+readme = "README.md"
+authors = [
+    {name = "Leonid Lunin", email = "lunin.leonid@gmail.com"},
+]
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/lrlunin/pytango-moenchZmqServer"
+
+[project.scripts]
+MoenchZmqServer = "tangods_moenchzmq:main"
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.setuptools.packages.find]
+
+[tool.setuptools.package-data]
+tangods_moenchzmq = ["VERSION"]
+"tangods_moenchzmq.default_images" = ["*.npy"]
+"tangods_moenchzmq.reorder_tables" = ["*.npy"]
