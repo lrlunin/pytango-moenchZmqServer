@@ -7,7 +7,7 @@ context = zmq.Context()
 socket = context.socket(zmq.PUB)
 socket.bind("tcp://127.0.0.1:50003")
 
-reorder_table = np.load("reorder_tables/moench03.npy")
+reorder_table = np.load("tangods_moenchzmq/reorder_tables/moench03.npy")
 inverse_table = np.argsort(reorder_table.flatten())
 font = ImageFont.truetype("tools/RobotoMono-Regular.ttf", size=12)
 

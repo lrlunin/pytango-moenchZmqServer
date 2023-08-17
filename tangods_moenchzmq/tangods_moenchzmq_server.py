@@ -636,8 +636,7 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
-                    self._readlock,
-                    self._writelock,
+                    self.rwlock_factory,
                     self.shared_memory_buffers,
                     self.shared_processed_frames,
                     self.shared_threshold,
@@ -661,11 +660,10 @@ class MoenchZmqServer(Device):
         payload = None
         packet1 = await self._socket.recv()
         try:
-            print("parsing header...")
+            # print("parsing header...")
             header = json.loads(packet1)
-            print(header)
             isNextPacketData = header.get("data") == 1
-            print(f"isNextPacketdata {isNextPacketData}")
+            # print(f"isNextPacketdata {isNextPacketData}")
         except:
             print("is not header")
             isNextPacketData = False
@@ -879,8 +877,7 @@ class MoenchZmqServer(Device):
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
 
-        rlock = rwlock.RWLockWrite(self._manager.Lock)
-        self._readlock, self._writelock = rlock.gen_rlock(), rlock.gen_wlock()
+        self.rwlock_factory = rwlock.RWLockRead(self._manager.Lock)
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
@@ -940,7 +937,7 @@ class MoenchZmqServer(Device):
         print(f"HWM of the socket = {hwm}")
 
     def delete_device(self):
-        self._process_pool.shutdown()
+        self._process_pool.shutdown(wait=False, cancel_futures=True)
         self._manager.shutdown()
         self._shared_memory_manager.shutdown()
 

@@ -20,10 +20,15 @@ def empty_shared_array(shared_value):
 
 
 def push_to_buffer(
-    indexes_array, pedestal_array, new_index, new_ped, pedestal, buf_size
+    indexes_array, pedestal_array_sm, new_index, new_ped, pedestal, buf_size
 ):
+    pedestal_array = np.ndarray(
+        (buf_size, 400, 400),
+        dtype=np.uint16,
+        buffer=pedestal_array_sm.buf,
+    )
     arg_min = np.argmin(indexes_array)
     old_data = np.copy(pedestal_array[arg_min])
     indexes_array[arg_min] = new_index
     pedestal_array[arg_min] = new_ped
-    pedestal[:] = pedestal - old_data / buf_size + new_ped / buf_size
+    pedestal[:] = pedestal + (new_ped - old_data) / buf_size

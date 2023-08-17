@@ -5,6 +5,7 @@ import numpy as np
 from enum import IntEnum
 from nexusformat.nexus import *
 from os import path
+from viztracer import trace_and_save
 
 
 class FrameType(IntEnum):
@@ -13,6 +14,7 @@ class FrameType(IntEnum):
     UNPUMPED = 2
 
 
+# @trace_and_save(output_dir="/home/moench/repos/pytango-moenchZmqServer/logs")
 def processing_function(
     processing_indexes_divisor,
     processing_indexes_array,
@@ -21,7 +23,6 @@ def processing_function(
     payload,
     lock,
     pedestal_rlock,
-    pedestal_wlock,
     shared_memories,
     processed_frames,
     threshold,
@@ -78,11 +79,7 @@ def processing_function(
     indexes_buffer = np.ndarray(
         pedestals_buffer_size, dtype=np.int32, buffer=pedestal_indexes_shared_memory.buf
     )
-    pedestals_frame_buffer = np.ndarray(
-        (pedestals_buffer_size, 400, 400),
-        dtype=np.uint16,
-        buffer=pedestal_buffer_shared_memory.buf,
-    )
+
     # calculations oustide of lock
     # variables assignments inside of lock
 
@@ -105,26 +102,35 @@ def processing_function(
     if process_pedestal:
         frametype = FrameType.PEDESTAL
     if frametype is FrameType.PEDESTAL:
-        pedestal_wlock.acquire()
-        print("enter pedestal lock")
-        push_to_buffer(
-            indexes_buffer,
-            pedestals_frame_buffer,
-            pedestal_frames_amount.value,
-            payload_copy,
-            pedestal,
-            pedestals_buffer_size,
-        )
-        pedestal_frames_amount.value += 1
-        pedestal_wlock.release()
-        print("quit pedesal lock")
+        wlock = pedestal_rlock.gen_wlock()
+        if wlock.acquire():
+            try:
+                print("enter pedestal wlock")
+                push_to_buffer(
+                    indexes_buffer,
+                    pedestal_buffer_shared_memory,
+                    pedestal_frames_amount.value,
+                    payload_copy,
+                    pedestal,
+                    pedestals_buffer_size,
+                )
+                pedestal_frames_amount.value += 1
+                print("end pedestla")
+            finally:
+                print("try to release")
+                wlock.release()
+        print("quit pedestal wlock")
     else:
-        pedestal_rlock.acquire()
-        pedestal_copy = np.copy(pedestal)
-        pedestal_rlock.release()
+        rlock = pedestal_rlock.gen_rlock()
+        if rlock.acquire():
+            try:
+                print("enter pedestal rlock")
+                pedestal_copy = np.copy(pedestal)
+            finally:
+                rlock.release()
+        print("quit pedestal rlock")
         analog = payload_copy - pedestal_copy
         if process_analog:
-            pass
             print("Processing analog...")
         if process_threshold:
             print("Processing threshold...")
