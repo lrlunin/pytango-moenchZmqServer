@@ -6,7 +6,6 @@ import asyncio
 import json
 import multiprocessing as mp
 from nexusformat.nexus import *
-from readerwriterlock import rwlock
 from importlib.resources import files
 
 from os import path, makedirs
@@ -636,7 +635,12 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
-                    self.rwlock_factory,
+                    self.rmutex,
+                    self.wmutex,
+                    self.readTry,
+                    self.resource,
+                    self.readcount,
+                    self.writecount,
                     self.shared_memory_buffers,
                     self.shared_processed_frames,
                     self.shared_threshold,
@@ -811,6 +815,14 @@ class MoenchZmqServer(Device):
         self.shared_amount_frames = self._manager.Value("I", 0)
         self.shared_split_pump = self._manager.Value("b", 0)
 
+        # for multipocessing rwlock
+        self.rmutex, self.wmutex, self.readTry, self.resource = [
+            self._manager.Semaphore() for i in range(0, 4)
+        ]
+        self.readcount, self.writecount = [
+            self._manager.Value("i", 0) for i in range(0, 2)
+        ]
+
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros((400, 400), dtype=float).nbytes
         # allocating 1x400x400 arrays for images
@@ -826,11 +838,6 @@ class MoenchZmqServer(Device):
         indexes_buffer_bytes = np.zeros(
             self.PEDESTAL_FRAME_BUFFER_SIZE, dtype=np.int32
         ).nbytes
-
-        # buffer_bytes = np.zeros([10000, 400, 400], dtype=np.uint16).nbytes
-
-        #    size=buffer_bytes
-        # )
         self.shared_memory_pedestals_buffer = self._shared_memory_manager.SharedMemory(
             size=pedestals_buffer_bytes
         )
@@ -857,7 +864,6 @@ class MoenchZmqServer(Device):
         self.event_loop.run_in_executor(None, self.update_from_event)
 
         # assigning the previews for the images (just for fun)
-        save_folder = "default_images"
         modes = ["analog", "threshold", "counting"]
         pump_states = ["unpumped", "pumped"]
         index = 1
@@ -932,7 +938,6 @@ class MoenchZmqServer(Device):
         print(f"Connecting to: {endpoint}")
         self._socket.connect(endpoint)
         self._socket.setsockopt(zmq.SUBSCRIBE, b"")
-        # self._socket.set_hwm(1000)
         hwm = self._socket.get_hwm()
         print(f"HWM of the socket = {hwm}")
 
