@@ -191,7 +191,7 @@ def processing_function(
         # is actually not necessary, isn't it?
         # is it possible that update_from_event will update the image after finish in
         # concurrent race and will update an old image?
-        event.wait()
+        # event.wait()
     raw += payload
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
