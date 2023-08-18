@@ -8,8 +8,6 @@ source:
   path: ../
 build:
   noarch: python
-  entry_points:
-    - MoenchZmqServer = tangods_moenchzmq:main
   script: "{{ PYTHON }} -m pip install . -vv --no-deps"
   number: 0
 requirements:

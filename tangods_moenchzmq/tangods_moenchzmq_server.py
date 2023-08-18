@@ -882,8 +882,6 @@ class MoenchZmqServer(Device):
         # initialization of tango events for pictures buffers
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
-
-        self.rwlock_factory = rwlock.RWLockRead(self._manager.Lock)
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
