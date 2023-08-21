@@ -36,7 +36,8 @@ def processing_function(
     pedestal_indexes_shared_memory,
     pedestal_buffer_shared_memory,
     pedestal_frames_amount,
-    event,
+    push_event,
+    ready_event,
     update_period,
     save_separate_frames,
     fileindex,
@@ -187,11 +188,9 @@ def processing_function(
             pumped_frames.value += 1
     processed_frames.value += 1
     if update_period != 0 and processed_frames.value % update_period == 0:
-        event.set()
-        # is actually not necessary, isn't it?
-        # is it possible that update_from_event will update the image after finish in
-        # concurrent race and will update an old image?
-        # event.wait()
+        ready_event.clear()
+        push_event.set()
+        ready_event.wait()
     raw += payload
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")

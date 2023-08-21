@@ -610,9 +610,10 @@ class MoenchZmqServer(Device):
 
     def update_from_event(self):
         while True:
-            self._event.wait()
+            self._push_event.wait()
             self.update_images_events()
-            self._event.clear()
+            self._push_event.clear()
+            self._ready_event.set()
 
     async def main(self):
         while True:
@@ -651,7 +652,8 @@ class MoenchZmqServer(Device):
                     self.shared_memory_pedestals_indexes,
                     self.shared_memory_pedestals_buffer,
                     self.shared_pedestal_frames,
-                    self._event,
+                    self._push_event,
+                    self._ready_event,
                     self._update_period,
                     self._save_separate_frames,
                     self._file_index,
@@ -694,6 +696,11 @@ class MoenchZmqServer(Device):
         for buffer in self.shared_memory_buffers[1:]:
             empty_shared_array(buffer)
         self.write_receive_frames(True)
+        # the self.update_images_events() is not working here
+        # for unknown reason
+        for attr in self._IMG_ATTR:
+            # call corresponding read_... functions with eval(...) instead of write it for each function call
+            self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
         self.set_state(DevState.RUNNING)
 
     def block_stop_receiver(self, received_frames_at_the_time):
@@ -781,8 +788,10 @@ class MoenchZmqServer(Device):
         self._manager = mp.Manager()
         # using simple mutex (lock) to synchronize
         self._lock = self._manager.Lock()
-        self._event = self._manager.Event()
-        self._event.clear()
+        self._push_event = self._manager.Event()
+        self._push_event.clear()
+        self._ready_event = self._manager.Event()
+        self._ready_event.clear()
         # extra pedestal lock for pedestal evaluation
         self._pedestal_lock = self._manager.Lock()
 
