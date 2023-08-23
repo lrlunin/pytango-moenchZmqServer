@@ -698,9 +698,9 @@ class MoenchZmqServer(Device):
         self.write_receive_frames(True)
         # the self.update_images_events() is not working here
         # for unknown reason
-        for attr in self._IMG_ATTR:
-            # call corresponding read_... functions with eval(...) instead of write it for each function call
-            self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
+        # for attr in self._IMG_ATTR:
+        #     # call corresponding read_... functions with eval(...) instead of write it for each function call
+        #     self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
         self.set_state(DevState.RUNNING)
 
     def block_stop_receiver(self, received_frames_at_the_time):
@@ -773,8 +773,7 @@ class MoenchZmqServer(Device):
 
     @command
     def reset_pedestal(self):
-        empty = np.zeros((400, 400), dtype=float)
-        self.write_pedestal(empty)
+        self._reset_pedestal()
 
     def init_device(self):
         """Initial tangoDS setup"""
@@ -853,12 +852,7 @@ class MoenchZmqServer(Device):
         self.shared_memory_pedestals_indexes = self._shared_memory_manager.SharedMemory(
             size=indexes_buffer_bytes
         )
-        indexes_array = np.ndarray(
-            self.PEDESTAL_FRAME_BUFFER_SIZE,
-            dtype=np.int32,
-            buffer=self.shared_memory_pedestals_indexes.buf,
-        )
-        indexes_array[:] = -np.arange(self.PEDESTAL_FRAME_BUFFER_SIZE) - 1
+        self._reset_pedestal()
         # creating thread pool executor to which the frame processing will be assigned
         self._process_pool = ProcessPoolExecutor(processing_cores_amount)
 
@@ -947,6 +941,22 @@ class MoenchZmqServer(Device):
         self._socket.setsockopt(zmq.SUBSCRIBE, b"")
         hwm = self._socket.get_hwm()
         print(f"HWM of the socket = {hwm}")
+
+    def _reset_pedestal(self):
+        indexes_array = np.ndarray(
+            self.PEDESTAL_FRAME_BUFFER_SIZE,
+            dtype=np.int32,
+            buffer=self.shared_memory_pedestals_indexes.buf,
+        )
+        frames_array = np.ndarray(
+            (self.PEDESTAL_FRAME_BUFFER_SIZE, 400, 400),
+            dtype=np.uint16,
+            buffer=self.shared_memory_pedestals_buffer.buf,
+        )
+        indexes_array[:] = -np.arange(self.PEDESTAL_FRAME_BUFFER_SIZE) - 1
+        frames_array[:] = 0
+        empty = np.zeros((400, 400), dtype=float)
+        self.write_pedestal(empty)
 
     def delete_device(self):
         self._process_pool.shutdown(wait=False, cancel_futures=True)
