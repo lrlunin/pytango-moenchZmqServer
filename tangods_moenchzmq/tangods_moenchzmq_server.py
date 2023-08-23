@@ -1,6 +1,7 @@
 from tangods_moenchzmq.util_funcs.parsers import *
 from tangods_moenchzmq.util_funcs.buffers import *
 from tangods_moenchzmq.proc_funcs.processing import processing_function
+from dataformat_moenchzmq.datatype import DataHeader, save_header
 
 import asyncio
 import json
@@ -34,7 +35,6 @@ class MoenchZmqServer(Device):
     processing_indexes_array = [0]
     processing_indexes_divisor = 1
     _save_separate_frames = False
-    _temp_path = ""
 
     _manager = None
     _context = None
@@ -121,6 +121,7 @@ class MoenchZmqServer(Device):
         doc="length of buffer for pedestal moving average",
         default_value=5000,
     )
+    RAW_FILEPATH = device_property(dtype=str, default_value="/mnt/ramfs")
 
     filename = attribute(
         label="filename",
@@ -656,8 +657,7 @@ class MoenchZmqServer(Device):
                     self._ready_event,
                     self._update_period,
                     self._save_separate_frames,
-                    self._file_index,
-                    self._temp_filepath,
+                    self._raw_file_fullpath,
                 )
 
     async def get_msg_pair(self):
@@ -701,6 +701,10 @@ class MoenchZmqServer(Device):
         # for attr in self._IMG_ATTR:
         #     # call corresponding read_... functions with eval(...) instead of write it for each function call
         #     self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
+        if self.read_save_separate_frames():
+            self._raw_file_fullpath = path.join(
+                self.RAW_FILEPATH, f"{self._filename}_{self._file_index}"
+            )
         self.set_state(DevState.RUNNING)
 
     def block_stop_receiver(self, received_frames_at_the_time):
@@ -742,19 +746,25 @@ class MoenchZmqServer(Device):
         self.save_nexus_file()
         file_index = self.read_file_index()
         if self.read_save_separate_frames():
-            filepath = self.read_filepath()
-            temp_folder = self.read_temp_filepath()
-            filename = self.read_filename()
-            threading.Thread(
-                daemon=True,
-                target=stack_partial_into_single,
-                args=(
-                    filepath,
-                    temp_folder,
-                    filename,
-                    file_index,
-                ),
-            ).start()
+            data_dict = {
+                "timestamp": int(datetime.datetime.now()),
+                "filename": self.read_filename().encode("utf-8"),
+                "filepath": self.read_filepath().encode("utf-8"),
+                "file_index": self.read_file_index(),
+                "normalize": self.read_normalize(),
+                "threshold": self.read_threshold(),
+                "counting_threshold": self.read_counting_threshold(),
+                "processing_pattern": self.read_processing_pattern().encode("utf-8"),
+                "processed_frames": self.read_processed_frames(),
+                "received_frames": self.read_received_frames(),
+                "unpumped_frames": self.read_unpumped_frames(),
+                "pumped_frames": self.read_pumped_frames(),
+                "process_analog_img": self.read_process_analog_img(),
+                "process_threshold_img": self.read_process_threshold_img(),
+                "process_counting_img": self.read_process_counting_img(),
+            }
+            data_header = DataHeader(**data_dict)
+            save_header(self._raw_file_fullpath, data_header)
         self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
 

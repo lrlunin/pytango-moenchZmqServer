@@ -5,6 +5,8 @@ import numpy as np
 from enum import IntEnum
 from nexusformat.nexus import *
 from os import path
+from functools import reduce
+from dataformat_moenchzmq.datatype import save_frame, FRAMETYPE_HEADER_SIZE
 
 
 class FrameType(IntEnum):
@@ -40,8 +42,7 @@ def processing_function(
     ready_event,
     update_period,
     save_separate_frames,
-    fileindex,
-    temp_filepath,
+    raw_file_fullpath,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -168,6 +169,14 @@ def processing_function(
         if process_counting:
             print("Processing counting...")
             clustered = getClustersSLS(analog, counting_threshold.value)
+    if save_separate_frames:
+        databytes = int(frametype).to_bytes(FRAMETYPE_HEADER_SIZE, "big")
+        if frametype == FrameType.PEDESTAL:
+            databytes += payload_copy.tobytes
+        else:
+            array_to_bytes = map(lambda x: x.tobytes(), [analog, threshold, clustered])
+            databytes += reduce((lambda x, y: x + y), array_to_bytes)
+        save_frame(raw_file_fullpath, frame_index, databytes)
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:
@@ -195,28 +204,3 @@ def processing_function(
     print(f"Left processing frame {frame_index}")
     print(f"Processed frames {processed_frames.value}")
     lock.release()
-    # the saving of the nexus file is pretty slow (approx 40ms)
-    # in contrary saving of the python object with pickle took 14ms
-    # the size of the serialized object is significantly bigger (7.7 MB vs 40.4 KB)
-    if save_separate_frames:
-        axes = ["raw", "pedestal"]
-        images = [payload_copy, pedestal_copy]
-        if frametype is not FrameType.PEDESTAL:
-            if process_analog:
-                axes.append("analog")
-                images.append(analog)
-            if process_threshold:
-                axes.append("thresholded")
-                images.append(thresholded)
-            if process_counting:
-                axes.append("clustered")
-                images.append(clustered)
-            images = np.array(images)
-        metadata_dict = {"frame_index": frame_index, "frame_type": frametype.name}
-        data = NXdata(signal=images, axes=axes)
-        metadata = NXcollection(entries=metadata_dict)
-        entry = NXentry(name=f"frame{frame_index}", data=data, metadata=metadata)
-        filename = path.join(
-            temp_filepath, f"fileindex-{fileindex}-frameindex-{frame_index}.nxs"
-        )
-        entry.save(filename)
