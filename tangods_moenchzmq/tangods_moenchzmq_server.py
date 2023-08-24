@@ -80,7 +80,7 @@ class MoenchZmqServer(Device):
     _process_analog_img = True
     _process_threshold_img = True
     _process_counting_img = False
-
+    _raw_file_fullpath = ""
     # reorder table for frame
     reorder_table = None
 
@@ -598,7 +598,8 @@ class MoenchZmqServer(Device):
         return self._process_counting_img
 
     def write_save_separate_frames(self, value):
-        self._save_separate_frames = value
+        # self._save_separate_frames = value
+        pass
 
     def read_save_separate_frames(self):
         return self._save_separate_frames

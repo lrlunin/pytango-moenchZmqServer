@@ -151,7 +151,6 @@ def processing_function(
         pedestal_frames_amount.value += 1
         wrelease()
         print("end pedestla")
-
         print("quit pedestal wlock")
     else:
         rlock()
@@ -174,6 +173,7 @@ def processing_function(
         if frametype == FrameType.PEDESTAL:
             databytes += payload_copy.tobytes
         else:
+            # if too slow - save with different offsets instead of joining
             array_to_bytes = map(lambda x: x.tobytes(), [analog, threshold, clustered])
             databytes += reduce((lambda x, y: x + y), array_to_bytes)
         save_frame(raw_file_fullpath, frame_index, databytes)
