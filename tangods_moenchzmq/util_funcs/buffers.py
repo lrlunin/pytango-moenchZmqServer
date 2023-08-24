@@ -28,8 +28,7 @@ def push_to_buffer(
         buffer=pedestal_array_sm.buf,
     )
     arg_min = np.argmin(indexes_array)
-    oldest_ped = pedestal_array[arg_min]
-    pedestal[:] = pedestal - oldest_ped / buf_size
+    old_data = np.copy(pedestal_array[arg_min])
     indexes_array[arg_min] = new_index
     pedestal_array[arg_min] = new_ped
-    pedestal[:] = pedestal + new_ped / buf_size
+    pedestal[:] = pedestal + (new_ped - old_data) / buf_size
