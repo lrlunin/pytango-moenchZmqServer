@@ -27,6 +27,10 @@ from tango.server import (
     run,
 )
 
+# temporar fix to save .raw files in compatible mode with old software
+# search insertions with SLS_LEGACY_RAW
+from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscardPolicy
+
 
 class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
@@ -35,6 +39,8 @@ class MoenchZmqServer(Device):
     processing_indexes_array = [0]
     processing_indexes_divisor = 1
     _save_separate_frames = False
+    if sys.argv[0] is "MoenchZmqServer":
+        moench_device = Moench()
 
     _manager = None
     _context = None
@@ -54,7 +60,7 @@ class MoenchZmqServer(Device):
 
     # probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing
     # and further loaded with dynamic attributes
-    shared_memory_pedestal = None
+    shared_memory_pedestal_counter = None
 
     shared_memory_analog_img = None
     shared_memory_analog_img_pumped = None
@@ -67,8 +73,6 @@ class MoenchZmqServer(Device):
 
     shared_memory_raw_img = None
     # shared scalar values
-    shared_threshold = None
-    shared_counting_threshold = None
     shared_processed_frames = None
     shared_received_frames = None
     shared_unpumped_frames = None
@@ -81,6 +85,7 @@ class MoenchZmqServer(Device):
     _process_threshold_img = True
     _process_counting_img = False
     _raw_file_fullpath = ""
+    _counting_sigma = 5.0
     # reorder table for frame
     reorder_table = None
 
@@ -172,6 +177,16 @@ class MoenchZmqServer(Device):
         access=AttrWriteType.READ_WRITE,
         doc="pedestal (averaged dark images), i.e. offset which will be subtracted from each acquired picture",
     )
+    pedestal_std = attribute(
+        display_level=DispLevel.EXPERT,
+        label="pedestal std",
+        dtype=float,
+        dformat=AttrDataFormat.IMAGE,
+        max_dim_x=400,
+        max_dim_y=400,
+        access=AttrWriteType.READ_WRITE,
+        doc="pedestal (averaged dark images), i.e. offset which will be subtracted from each acquired picture",
+    )
     analog_img = attribute(
         display_level=DispLevel.EXPERT,
         label="analog img",
@@ -253,8 +268,8 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="cut-off value for thresholding",
     )
-    counting_threshold = attribute(
-        label="counting th",
+    counting_sigma = attribute(
+        label="counting sigma",
         unit="ADU",
         dtype=float,
         min_value=0.0,
@@ -382,6 +397,9 @@ class MoenchZmqServer(Device):
 
     def write_filename(self, value):
         self._filename = value
+        # SLS_LEGACY_RAW
+        if sys.argv[0] is "MoenchZmqServer":
+            self.moench_device.fname = value
 
     def read_filename(self):
         return self._filename
@@ -399,6 +417,9 @@ class MoenchZmqServer(Device):
                     "write_filepath",
                 )
         self._filepath = joined_path
+        # SLS_LEGACY_RAW
+        if sys.argv[0] is "MoenchZmqServer":
+            self.moench_device.fpath = joined_path
 
     def read_filepath(self):
         return self._filepath
@@ -417,6 +438,9 @@ class MoenchZmqServer(Device):
 
     def write_file_index(self, value):
         self._file_index = value
+        # SLS_LEGACY_RAW
+        if sys.argv[0] is "MoenchZmqServer":
+            self.moench_device.findex = value
 
     def read_file_index(self):
         return self._file_index
@@ -440,6 +464,23 @@ class MoenchZmqServer(Device):
         return read_shared_array(
             shared_memory=self.shared_memory_buffers[0], flip=self.FLIP_IMAGE
         )
+
+    def write_pedestal_std(self, value):
+        pass
+
+    def read_pedestal_std(self):
+        pedestal = read_shared_array(
+            shared_memory=self.shared_memory_buffers[0],
+            flip=False,
+        )
+        pedestal_counter = np.ndarray(
+            (400, 400), dtype=float, buffer=self.shared_memory_pedestal_counter.buf
+        )
+        pedestal_squared = np.ndarray(
+            (400, 400), dtype=float, buffer=self.shared_memory_pedestal_sqaured.buf
+        )
+        pedestal_std = get_ped_std(pedestal_counter, pedestal, pedestal_squared)
+        return pedestal_std
 
     def write_analog_img(self, value):
         write_shared_array(shared_memory=self.shared_memory_buffers[1], value=value)
@@ -499,16 +540,16 @@ class MoenchZmqServer(Device):
 
     def write_threshold(self, value):
         # with self.shared_threshold.get_lock():
-        self.shared_threshold.value = value
+        self._threshold = value
 
     def read_threshold(self):
-        return self.shared_threshold.value
+        return self._threshold
 
-    def write_counting_threshold(self, value):
-        self.shared_counting_threshold.value = value
+    def write_counting_sigma(self, value):
+        self._counting_sigma = value
 
-    def read_counting_threshold(self):
-        return self.shared_counting_threshold.value
+    def read_counting_sigma(self):
+        return self._counting_sigma
 
     def write_processing_pattern(self, value):
         self.processing_pattern_string = value
@@ -575,6 +616,11 @@ class MoenchZmqServer(Device):
 
     def write_process_pedestal_img(self, value):
         self._process_pedestal_img = value
+        if sys.argv[0] is "MoenchZmqServer":
+            if value:
+                self.moench_device.rx_jsonpara["frameMode"] = "newPedestal"
+            else:
+                self.moench_device.rx_jsonpara["frameMode"] = "frame"
 
     def read_process_pedestal_img(self):
         return self._process_pedestal_img
@@ -646,8 +692,8 @@ class MoenchZmqServer(Device):
                     self.writecount,
                     self.shared_memory_buffers,
                     self.shared_processed_frames,
-                    self.shared_threshold,
-                    self.shared_counting_threshold,
+                    self._threshold,
+                    self._counting_sigma,
                     self.shared_unpumped_frames,
                     self.shared_pumped_frames,
                     self.PEDESTAL_FRAME_BUFFER_SIZE,
@@ -659,6 +705,8 @@ class MoenchZmqServer(Device):
                     self._update_period,
                     self._save_separate_frames,
                     self._raw_file_fullpath,
+                    self.shared_memory_pedestal_counter,
+                    self.shared_memory_pedestal_sqaured,
                 )
 
     async def get_msg_pair(self):
@@ -823,8 +871,6 @@ class MoenchZmqServer(Device):
         self.write_file_index(max_file_index + 1)
 
         # using shared thread-safe Value instance from multiprocessing
-        self.shared_threshold = self._manager.Value("f", 0)
-        self.shared_counting_threshold = self._manager.Value("f", 0)
         self.shared_receive_frames = self._manager.Value("b", 0)
         self.shared_pedestal_frames = self._manager.Value("I", 0)
         self.shared_processed_frames = self._manager.Value("I", 0)
@@ -836,10 +882,10 @@ class MoenchZmqServer(Device):
 
         # for multipocessing rwlock
         self.rmutex, self.wmutex, self.readTry, self.resource = [
-            self._manager.Semaphore() for i in range(0, 4)
+            self._manager.Semaphore() for _ in range(0, 4)
         ]
         self.readcount, self.writecount = [
-            self._manager.Value("i", 0) for i in range(0, 2)
+            self._manager.Value("i", 0) for _ in range(0, 2)
         ]
 
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
@@ -847,7 +893,7 @@ class MoenchZmqServer(Device):
         # allocating 1x400x400 arrays for images
         # 7 arrays: pedestal, analog_img, analog_img_pumped, threshold_img, threshold_img_pumped, counting_img, counting_img_pumped
         self.shared_memory_buffers = []
-        for i in range(0, 8):
+        for _ in range(0, 8):
             self.shared_memory_buffers.append(
                 self._shared_memory_manager.SharedMemory(size=img_bytes)
             )
@@ -857,6 +903,12 @@ class MoenchZmqServer(Device):
         indexes_buffer_bytes = np.zeros(
             self.PEDESTAL_FRAME_BUFFER_SIZE, dtype=np.int32
         ).nbytes
+        self.shared_memory_pedestal_counter = self._shared_memory_manager.SharedMemory(
+            size=img_bytes
+        )
+        self.shared_memory_pedestal_sqaured = self._shared_memory_manager.SharedMemory(
+            size=img_bytes
+        )
         self.shared_memory_pedestals_buffer = self._shared_memory_manager.SharedMemory(
             size=pedestals_buffer_bytes
         )
@@ -954,20 +1006,10 @@ class MoenchZmqServer(Device):
         print(f"HWM of the socket = {hwm}")
 
     def _reset_pedestal(self):
-        indexes_array = np.ndarray(
-            self.PEDESTAL_FRAME_BUFFER_SIZE,
-            dtype=np.int32,
-            buffer=self.shared_memory_pedestals_indexes.buf,
-        )
-        frames_array = np.ndarray(
-            (self.PEDESTAL_FRAME_BUFFER_SIZE, 400, 400),
-            dtype=np.uint16,
-            buffer=self.shared_memory_pedestals_buffer.buf,
-        )
-        indexes_array[:] = -np.arange(self.PEDESTAL_FRAME_BUFFER_SIZE) - 1
-        frames_array[:] = 0
-        empty = np.zeros((400, 400), dtype=float)
-        self.write_pedestal(empty)
+        empty_array = np.zeros((400, 400), dtype=float)
+        write_shared_array(self.shared_memory_pedestal_counter, empty_array)
+        write_shared_array(self.shared_memory_buffers[0], empty_array)
+        write_shared_array(self.shared_memory_pedestal_sqaured, empty_array)
 
     def delete_device(self):
         self._process_pool.shutdown(wait=False, cancel_futures=True)

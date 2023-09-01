@@ -1,5 +1,10 @@
-from tangods_moenchzmq.util_funcs.buffers import push_to_buffer
-from tangods_moenchzmq.proc_funcs.counting import getClustersSLS
+from tangods_moenchzmq.util_funcs.buffers import (
+    push_to_ped_buffer,
+    fast_update_ped_buffer,
+    get_ped_std,
+    get_ped,
+)
+from tangods_moenchzmq.proc_funcs.counting import getClustersSLS, classifyPixel
 
 import numpy as np
 from enum import IntEnum
@@ -31,7 +36,7 @@ def processing_function(
     shared_memories,
     processed_frames,
     threshold,
-    counting_threshold,
+    counting_sigma,
     unpumped_frames,
     pumped_frames,
     pedestals_buffer_size,
@@ -43,6 +48,8 @@ def processing_function(
     update_period,
     save_separate_frames,
     raw_file_fullpath,
+    shared_memory_pedestal_counter,
+    shared_memory_pedestal_squared,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -115,7 +122,12 @@ def processing_function(
     indexes_buffer = np.ndarray(
         pedestals_buffer_size, dtype=np.int32, buffer=pedestal_indexes_shared_memory.buf
     )
-
+    pedestal_counter = np.ndarray(
+        (400, 400), dtype=float, buffer=shared_memory_pedestal_counter.buf
+    )
+    pedestal_squared = np.ndarray(
+        (400, 400), dtype=float, buffer=shared_memory_pedestal_squared.buf
+    )
     # calculations oustide of lock
     # variables assignments inside of lock
 
@@ -137,37 +149,45 @@ def processing_function(
         frametype = FrameType.UNPUMPED
     if process_pedestal:
         frametype = FrameType.PEDESTAL
+    rlock()
+    print("enter pedestal rlock")
+    pedestal_counter_copy = np.copy(pedestal_counter)
+    pedestal_squared_copy = np.copy(pedestal_squared)
+    pedestal_copy = np.copy(pedestal)
+    divided_ped = get_ped(pedestal_counter_copy, pedestal)
+    rrelease()
+
+    pedestal_std = get_ped_std(
+        pedestal_counter_copy, pedestal_copy, pedestal_squared_copy
+    )
+    print("quit pedestal rlock")
+    analog = payload_copy - divided_ped
+
+    pixel_classes = classifyPixel(analog, pedestal_std, counting_sigma)
+    pedestal_pixels = pixel_classes == 0
+    photon_pixels = pixel_classes == 1
+    photon_max_pixels = pixel_classes == 2
     if frametype is FrameType.PEDESTAL:
-        wlock()
-        print("enter pedestal wlock")
-        push_to_buffer(
-            indexes_buffer,
-            pedestal_buffer_shared_memory,
-            pedestal_frames_amount.value,
-            payload_copy,
-            pedestal,
-            pedestals_buffer_size,
-        )
-        pedestal_frames_amount.value += 1
-        wrelease()
-        print("end pedestla")
-        print("quit pedestal wlock")
-    else:
-        rlock()
-        print("enter pedestal rlock")
-        pedestal_copy = np.copy(pedestal)
-        print("quit pedestal rlock")
-        rrelease()
-        analog = payload_copy - pedestal_copy
-        if process_analog:
-            print("Processing analog...")
-        if process_threshold:
-            print("Processing threshold...")
-            thresholded = analog > threshold.value
-            print(f"th = {threshold.value}")
-        if process_counting:
-            print("Processing counting...")
-            clustered = getClustersSLS(analog, counting_threshold.value)
+        pedestal_pixels = np.ones((400, 400), dtype=np.int8)
+    wlock()
+    fast_update_ped_buffer(
+        payload_copy,
+        pedestal_pixels.astype(np.uint8),
+        pedestal,
+        pedestal_squared,
+        pedestal_counter,
+    )
+    wrelease()
+    if process_analog:
+        print("Processing analog...")
+    if process_threshold:
+        print("Processing threshold...")
+        thresholded = analog > threshold
+        print(f"th = {threshold}")
+    if process_counting:
+        print("Processing counting...")
+        clustered = photon_max_pixels.astype(np.int16)
+
     if save_separate_frames:
         databytes = int(frametype).to_bytes(FRAMETYPE_HEADER_SIZE, "big")
         if frametype == FrameType.PEDESTAL:
