@@ -167,16 +167,6 @@ class MoenchZmqServer(Device):
         hw_memorized=True,
         doc="if true - normalize the images like 1 frame (divide through frames number)",
     )
-    pedestal = attribute(
-        display_level=DispLevel.EXPERT,
-        label="pedestal",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
-        doc="pedestal (averaged dark images), i.e. offset which will be subtracted from each acquired picture",
-    )
     pedestal_std = attribute(
         display_level=DispLevel.EXPERT,
         label="pedestal std",
@@ -184,80 +174,9 @@ class MoenchZmqServer(Device):
         dformat=AttrDataFormat.IMAGE,
         max_dim_x=400,
         max_dim_y=400,
-        access=AttrWriteType.READ_WRITE,
+        access=AttrWriteType.READ,
         doc="pedestal (averaged dark images), i.e. offset which will be subtracted from each acquired picture",
     )
-    analog_img = attribute(
-        display_level=DispLevel.EXPERT,
-        label="analog img",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc="sum of images processed with subtracted pedestals",
-    )
-    analog_img_pumped = attribute(
-        display_level=DispLevel.EXPERT,
-        label="analog img pumped",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc="sum of images processed with subtracted pedestals",
-    )
-    threshold_img = attribute(
-        display_level=DispLevel.EXPERT,
-        label="threshold img",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc='sum of "analog images" (with subtracted pedestal) processed with thresholding algorithm',
-    )
-    threshold_img_pumped = attribute(
-        display_level=DispLevel.EXPERT,
-        label="threshold img pumped",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc='sum of "analog images" (with subtracted pedestal) processed with thresholding algorithm',
-    )
-    counting_img = attribute(
-        display_level=DispLevel.EXPERT,
-        label="counting img",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc='sum of "analog images" (with subtracted pedestal) processed with counting algorithm',
-    )
-    counting_img_pumped = attribute(
-        display_level=DispLevel.EXPERT,
-        label="counting img pumped",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc='sum of "analog images" (with subtracted pedestal) processed with counting algorithm',
-    )
-    raw_img = attribute(
-        display_level=DispLevel.EXPERT,
-        label="raw img",
-        dtype=float,
-        dformat=AttrDataFormat.IMAGE,
-        max_dim_x=400,
-        max_dim_y=400,
-        access=AttrWriteType.READ,
-        doc="sum of all frames without pedestal subtraction",
-    )
-
     threshold = attribute(
         label="th",
         unit="ADU",
@@ -424,9 +343,6 @@ class MoenchZmqServer(Device):
     def read_filepath(self):
         return self._filepath
 
-    def write_space_available(self, value):
-        pass
-
     def read_space_available(self):
         filepath = self.read_filepath()
         result = 0
@@ -451,22 +367,8 @@ class MoenchZmqServer(Device):
     def read_normalize(self):
         return self._normalize
 
-    def write_previous_file_index(self, value):
-        pass
-
     def read_previous_file_index(self):
         return self.read_file_index() - 1
-
-    def write_pedestal(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[0], value=value)
-
-    def read_pedestal(self):
-        return read_shared_array(
-            shared_memory=self.shared_memory_buffers[0], flip=self.FLIP_IMAGE
-        )
-
-    def write_pedestal_std(self, value):
-        pass
 
     def read_pedestal_std(self):
         pedestal = read_shared_array(
@@ -482,61 +384,30 @@ class MoenchZmqServer(Device):
         pedestal_std = get_ped_std(pedestal_counter, pedestal, pedestal_squared)
         return pedestal_std
 
-    def write_analog_img(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[1], value=value)
+    def initialize_dynamic_attributes(self):
+        for img_attr_name in self._IMG_ATTR:
+            attr = attribute(
+                name=img_attr_name,
+                display_level=DispLevel.EXPERT,
+                label=img_attr_name,
+                dtype=float,
+                dformat=AttrDataFormat.IMAGE,
+                max_dim_x=400,
+                max_dim_y=400,
+                fget=self.read_image,
+                access=AttrWriteType.READ,
+            )
+            self.add_attribute(attr)
 
-    def read_analog_img(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[1], flip=flip)
-
-    def write_analog_img_pumped(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[2], value=value)
-
-    def read_analog_img_pumped(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[2], flip=flip)
-
-    def write_threshold_img(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[3], value=value)
-
-    def read_threshold_img(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[3], flip=flip)
-
-    def write_threshold_img_pumped(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[4], value=value)
-
-    def read_threshold_img_pumped(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[4], flip=flip)
-
-    def write_counting_img(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[5], value=value)
-
-    def read_counting_img(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[5], flip=flip)
-
-    def write_counting_img_pumped(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[6], value=value)
-
-    def read_counting_img_pumped(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[6], flip=flip)
-
-    def write_raw_img(self, value):
-        write_shared_array(shared_memory=self.shared_memory_buffers[7], value=value)
-
-    def read_raw_img(self, flip=None):
-        if flip is None:
-            flip = self.FLIP_IMAGE
-        return read_shared_array(shared_memory=self.shared_memory_buffers[7], flip=flip)
+    def read_image(self, attribute):
+        try:
+            attr_name = attribute.get_name()
+            index = self._IMG_ATTR.index(attr_name)
+            return read_shared_array(
+                shared_memory=self.shared_memory_buffers[index], flip=self.FLIP_IMAGE
+            )
+        except ValueError as e:
+            self.error_stream(f"Cannot find {attr_name} in list")
 
     def write_threshold(self, value):
         # with self.shared_threshold.get_lock():
@@ -593,7 +464,7 @@ class MoenchZmqServer(Device):
         return self.shared_pumped_frames.value
 
     def write_receive_frames(self, value):
-        self.shared_receive_frames.value = bool(value)
+        self.shared_receive_frames.value = value
 
     def read_receive_frames(self):
         return bool(self.shared_receive_frames.value)
@@ -771,25 +642,27 @@ class MoenchZmqServer(Device):
         pumped_frames = self.read_pumped_frames()
         if self.read_normalize():
             if unpumped_frames != 0:
-                self.write_analog_img(
-                    self.read_analog_img(flip=False) / unpumped_frames
-                )
-                self.write_threshold_img(
-                    self.read_threshold_img(flip=False) / unpumped_frames
-                )
-                self.write_counting_img(
-                    self.read_counting_img(flip=False) / unpumped_frames
-                )
+                pass
+                # self.write_analog_img(
+                #     self.read_analog_img(flip=False) / unpumped_frames
+                # )
+                # self.write_threshold_img(
+                #     self.read_threshold_img(flip=False) / unpumped_frames
+                # )
+                # self.write_counting_img(
+                #     self.read_counting_img(flip=False) / unpumped_frames
+                # )
             if pumped_frames != 0:
-                self.write_analog_img_pumped(
-                    self.read_analog_img_pumped(flip=False) / pumped_frames
-                )
-                self.write_threshold_img_pumped(
-                    self.read_threshold_img_pumped(flip=False) / pumped_frames
-                )
-                self.write_counting_img_pumped(
-                    self.read_counting_img_pumped(flip=False) / pumped_frames
-                )
+                pass
+                # self.write_analog_img_pumped(
+                #     self.read_analog_img_pumped(flip=False) / pumped_frames
+                # )
+                # self.write_threshold_img_pumped(
+                #     self.read_threshold_img_pumped(flip=False) / pumped_frames
+                # )
+                # self.write_counting_img_pumped(
+                #     self.read_counting_img_pumped(flip=False) / pumped_frames
+                # )
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_nexus_file()
@@ -838,6 +711,7 @@ class MoenchZmqServer(Device):
         """Initial tangoDS setup"""
         Device.init_device(self)
         self.set_state(DevState.INIT)
+        self.initialize_dynamic_attributes()
         self.get_device_properties(self.get_device_class())
         self.reorder_table = np.load(
             files("tangods_moenchzmq.reorder_tables").joinpath("moench03.npy")
@@ -893,7 +767,7 @@ class MoenchZmqServer(Device):
         # allocating 1x400x400 arrays for images
         # 7 arrays: pedestal, analog_img, analog_img_pumped, threshold_img, threshold_img_pumped, counting_img, counting_img_pumped
         self.shared_memory_buffers = []
-        for _ in range(0, 8):
+        for _ in self._IMG_ATTR:
             self.shared_memory_buffers.append(
                 self._shared_memory_manager.SharedMemory(size=img_bytes)
             )
