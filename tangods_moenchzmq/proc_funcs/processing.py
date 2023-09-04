@@ -154,13 +154,13 @@ def processing_function(
     pedestal_counter_copy = np.copy(pedestal_counter)
     pedestal_squared_copy = np.copy(pedestal_squared)
     pedestal_copy = np.copy(pedestal)
-    divided_ped = get_ped(pedestal_counter_copy, pedestal)
+    print("quit pedestal rlock")
     rrelease()
 
+    divided_ped = get_ped(pedestal_counter_copy, pedestal_copy)
     pedestal_std = get_ped_std(
         pedestal_counter_copy, pedestal_copy, pedestal_squared_copy
     )
-    print("quit pedestal rlock")
     analog = payload_copy - divided_ped
 
     pixel_classes = classifyPixel(analog, pedestal_std, counting_sigma)
@@ -178,15 +178,16 @@ def processing_function(
         pedestal_counter,
     )
     wrelease()
-    if process_analog:
-        print("Processing analog...")
-    if process_threshold:
-        print("Processing threshold...")
-        thresholded = analog > threshold
-        print(f"th = {threshold}")
-    if process_counting:
-        print("Processing counting...")
-        clustered = photon_max_pixels.astype(np.int16)
+    if frametype is not FrameType.PEDESTAL:
+        if process_analog:
+            print("Processing analog...")
+        if process_threshold:
+            print("Processing threshold...")
+            thresholded = analog > threshold
+            print(f"th = {threshold}")
+        if process_counting:
+            print("Processing counting...")
+            clustered = photon_max_pixels.astype(np.int16)
 
     if save_separate_frames:
         databytes = int(frametype).to_bytes(FRAMETYPE_HEADER_SIZE, "big")
@@ -197,6 +198,7 @@ def processing_function(
             array_to_bytes = map(lambda x: x.tobytes(), [analog, threshold, clustered])
             databytes += reduce((lambda x, y: x + y), array_to_bytes)
         save_frame(raw_file_fullpath, frame_index, databytes)
+
     lock.acquire()
     match frametype:
         case FrameType.UNPUMPED:

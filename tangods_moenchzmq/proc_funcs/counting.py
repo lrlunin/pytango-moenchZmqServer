@@ -145,12 +145,13 @@ def getClustersSLS(frame, cut_off_adu):
 
 @njit("u1[:,:](f8[:,:], f8[:,:], f8)")
 def classifyPixel(frame, std, nsigma):
+    FRAME_SHAPE = 400
     clusterSize = 3
-    class_mask = np.zeros((400, 400), dtype=np.uint8)
+    class_mask = np.zeros((FRAME_SHAPE, FRAME_SHAPE), dtype=np.uint8)
     c2 = np.sqrt((clusterSize + 1) // 2 * (clusterSize + 1) // 2)
     c3 = np.sqrt(clusterSize * clusterSize)
-    for iy in range(400):
-        for ix in range(400):
+    for iy in range(FRAME_SHAPE):
+        for ix in range(FRAME_SHAPE):
             rms = std[iy, ix]
             max_value = 0
             tl = 0
@@ -165,9 +166,9 @@ def classifyPixel(frame, std, nsigma):
                 for ic in range(-clusterSize // 2, clusterSize // 2 + 1):
                     if (
                         (iy + ir) >= 0
-                        and (iy + ir) < frame.shape[0]
+                        and (iy + ir) < FRAME_SHAPE
                         and (ix + ic) >= 0
-                        and (ix + ic) < frame.shape[1]
+                        and (ix + ic) < FRAME_SHAPE
                     ):
                         v = frame[iy + ir, ix + ic]
                         tot += v

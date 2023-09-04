@@ -675,7 +675,7 @@ class MoenchZmqServer(Device):
                 "file_index": self.read_file_index(),
                 "normalize": self.read_normalize(),
                 "threshold": self.read_threshold(),
-                "counting_threshold": self.read_counting_threshold(),
+                "counting_sigma": self.read_counting_sigma(),
                 "processing_pattern": self.read_processing_pattern().encode("utf-8"),
                 "processed_frames": self.read_processed_frames(),
                 "received_frames": self.read_received_frames(),

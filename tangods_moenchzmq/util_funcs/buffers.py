@@ -39,8 +39,9 @@ def push_to_ped_buffer(
 def fast_update_ped_buffer(
     frame, pedestal_mask, pedestal, pedestal_squared, pedestal_counter
 ):
+    BUFFER_SIZE = 5000
     for y, x in np.argwhere(pedestal_mask):
-        if pedestal_counter[y, x] < 5000:
+        if pedestal_counter[y, x] < BUFFER_SIZE:
             pedestal_counter[y, x] += 1
             if pedestal_counter[y, x] == 1:
                 pedestal[y, x] = frame[y, x]
@@ -54,16 +55,24 @@ def fast_update_ped_buffer(
                 pedestal_squared[y, x] = frame[y, x] ** 2
                 pedestal_counter[y, x] += 1
             else:
-                pedestal[y, x] = pedestal[y, x] + frame[y, x] - pedestal[y, x] / 5000
+                pedestal[y, x] = (
+                    pedestal[y, x] + frame[y, x] - pedestal[y, x] / BUFFER_SIZE
+                )
                 pedestal_squared[y, x] = (
                     pedestal_squared[y, x]
                     + frame[y, x] ** 2
-                    - pedestal_squared[y, x] / 5000
+                    - pedestal_squared[y, x] / BUFFER_SIZE
                 )
 
 
+@njit("f8[:,:](f8[:,:], f8[:,:])")
 def get_ped(pedestal_counter, pedestal):
-    return np.nan_to_num(pedestal / pedestal_counter)
+    result = np.zeros((400, 400), dtype=float)
+    for y in range(400):
+        for x in range(400):
+            if pedestal_counter[y, x] != 0:
+                result[y, x] = pedestal[y, x] / pedestal_counter[y, x]
+    return result
 
 
 @njit("f8[:,:](f8[:,:], f8[:,:], f8[:,:])")
@@ -77,6 +86,4 @@ def get_ped_std(pedestal_counter, pedestal, pedestal_squared):
                     pedestal_squared[y, x] / ped_counter
                     - (pedestal[y, x] / ped_counter) ** 2
                 )
-            else:
-                result[y, x] = 0
     return np.sqrt(result)

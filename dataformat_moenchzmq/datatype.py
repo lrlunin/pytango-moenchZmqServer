@@ -11,7 +11,7 @@ class DataHeader(Structure):
         ("file_index", c_int),
         ("normalize", c_bool),
         ("threshold", c_float),
-        ("counting_threshold", c_float),
+        ("counting_sigma", c_float),
         ("processing_pattern", c_char_p),
         ("processed_frames", c_int),
         ("received_frames", c_int),
@@ -25,6 +25,7 @@ class DataHeader(Structure):
 
 HEADER_SIZE = sizeof(DataHeader)
 FRAMETYPE_HEADER_SIZE = 2
+# numpy 400x400 float array nbytes
 CAPTURE_SIZE = 1280000
 PROCESSING_MODES = 3
 DATA_ENTRY_SIZE = FRAMETYPE_HEADER_SIZE + PROCESSING_MODES * CAPTURE_SIZE
@@ -33,7 +34,7 @@ DATA_ENTRY_SIZE = FRAMETYPE_HEADER_SIZE + PROCESSING_MODES * CAPTURE_SIZE
 def save_header(filename: str, header: DataHeader):
     fd = os.open(filename, os.O_WRONLY)
     os.pwritev(fd, bytearray(header), 0)
-    os.fsync()
+    os.fsync(fd)
     os.close(fd)
 
 
@@ -41,5 +42,5 @@ def save_frame(filename: str, frame_index: int, bytes_to_save: bytearray):
     frame_offset = HEADER_SIZE + frame_index * DATA_ENTRY_SIZE
     fd = os.open(filename, os.O_WRONLY)
     os.pwritev(fd, bytes_to_save, frame_offset)
-    os.fsync()
+    os.fsync(fd)
     os.close(fd)
