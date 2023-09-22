@@ -400,14 +400,17 @@ class MoenchZmqServer(Device):
             self.add_attribute(attr)
 
     def read_image(self, attribute):
+        attr_name = attribute.get_name()
+        return self.read_image_by_name(attr_name)
+
+    def read_image_by_name(self, image_attr_name):
         try:
-            attr_name = attribute.get_name()
-            index = self._IMG_ATTR.index(attr_name)
+            index = self._IMG_ATTR.index(image_attr_name)
             return read_shared_array(
                 shared_memory=self.shared_memory_buffers[index], flip=self.FLIP_IMAGE
             )
         except ValueError as e:
-            self.error_stream(f"Cannot find {attr_name} in list")
+            self.error_stream(f"Cannot find {image_attr_name} in list")
 
     def write_threshold(self, value):
         # with self.shared_threshold.get_lock():
@@ -827,9 +830,10 @@ class MoenchZmqServer(Device):
     # updating of tango events for pictures buffers
     @command
     def update_images_events(self):
-        for attr in self._IMG_ATTR:
+        for img_attr_name in self._IMG_ATTR:
             # call corresponding read_... functions with eval(...) instead of write it for each function call
-            self.push_change_event(attr, eval(f"self.read_{attr}()"), 400, 400)
+            img = self.read_image_by_name(img_attr_name)
+            self.push_change_event(img_attr_name, img, 400, 400)
 
     def save_nexus_file(self):
         filepath = self.read_filepath()
