@@ -27,12 +27,10 @@ def processing_function(
     header,
     payload,
     lock,
-    rmutex,
-    wmutex,
-    readTry,
     resource,
+    rmutex,
+    serviceQueue,
     readcount,
-    writecount,
     shared_memories,
     processed_frames,
     threshold,
@@ -63,29 +61,21 @@ def processing_function(
     #     self.shared_memory_raw_img,
     # ]
     def wlock():
-        wmutex.acquire()
-        writecount.value += 1
-        if writecount.value == 1:
-            readTry.acquire()
-        wmutex.release()
+        serviceQueue.acquire()
         resource.acquire()
+        serviceQueue.release()
 
     def wrelease():
         resource.release()
-        wmutex.acquire()
-        writecount.value -= 1
-        if writecount.value == 0:
-            readTry.release()
-        wmutex.release()
 
     def rlock():
-        readTry.acquire()
+        serviceQueue.acquire()
         rmutex.acquire()
         readcount.value += 1
         if readcount.value == 1:
             resource.acquire()
+        serviceQueue.release()
         rmutex.release()
-        readTry.release()
 
     def rrelease():
         rmutex.acquire()

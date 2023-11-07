@@ -557,12 +557,10 @@ class MoenchZmqServer(Device):
                     header,
                     payload,
                     self._lock,
-                    self.rmutex,
-                    self.wmutex,
-                    self.readTry,
                     self.resource,
+                    self.rmutex,
+                    self.serviceQueue,
                     self.readcount,
-                    self.writecount,
                     self.shared_memory_buffers,
                     self.shared_processed_frames,
                     self._threshold,
@@ -757,12 +755,11 @@ class MoenchZmqServer(Device):
         self.shared_split_pump = self._manager.Value("b", 0)
 
         # for multipocessing rwlock
-        self.rmutex, self.wmutex, self.readTry, self.resource = [
-            self._manager.Semaphore() for _ in range(0, 4)
+        # see https://en.wikipedia.org/wiki/Readers%E2%80%93writers_problem#Third_readers%E2%80%93writers_problem
+        self.resource, self.rmutex, self.serviceQueue = [
+            self._manager.Semaphore() for _ in range(0, 3)
         ]
-        self.readcount, self.writecount = [
-            self._manager.Value("i", 0) for _ in range(0, 2)
-        ]
+        self.readcount = self._manager.Value("i", 0)
 
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros((400, 400), dtype=float).nbytes
