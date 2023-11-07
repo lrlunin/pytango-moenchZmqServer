@@ -189,7 +189,6 @@ class MoenchZmqServer(Device):
     )
     counting_sigma = attribute(
         label="counting sigma",
-        unit="ADU",
         dtype=float,
         min_value=0.0,
         access=AttrWriteType.READ_WRITE,
@@ -843,8 +842,8 @@ class MoenchZmqServer(Device):
         # need to be refactored soon
         field_names = self._IMG_ATTR
         images = np.zeros((len(field_names), 400, 400))
-        for i, attr in enumerate(field_names):
-            images[i] = eval(f"self.read_{attr}()")
+        for i, field_name in enumerate(field_names):
+            images[i] = self.read_image_by_name(field_name)
         # file will be saved like
         savepath = path.join(filepath, f"{filename}_{index}")
 
@@ -853,7 +852,7 @@ class MoenchZmqServer(Device):
         metadata_attributes = [
             "normalize",
             "threshold",
-            "counting_threshold",
+            "counting_sigma",
             "processing_pattern",
             "processed_frames",
             "unpumped_frames",
@@ -866,7 +865,6 @@ class MoenchZmqServer(Device):
 
         metadata = NXcollection(entries=metadata_dict)
         metadata["threshold"].units = "ADU"
-        metadata["counting_threshold"].units = "ADU"
         entry = NXentry(name=f"entry{index}", data=data, metadata=metadata)
         if path.isfile(f"{savepath}.nxs"):
             time_str = datetime_now.strftime("%H:%M:%S")
