@@ -16,7 +16,8 @@ dependencies = [
     'numpy >= 1.24.1',
     'pyzmq >= 23.2.0',
     'numba >= 0.57',
-    'nexusformat >= 1.0.2'
+    'nexusformat >= 1.0.2',
+    'Pillow'
 ]
 license = {text = "MIT"}
 dynamic = ["version"]
@@ -26,6 +27,7 @@ Homepage = "https://github.com/lrlunin/pytango-moenchZmqServer"
 
 [project.scripts]
 MoenchZmqServer = "tangods_moenchzmq:main"
+MoenchZmqTestServer = "testserver_moenchzmq:main"
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
@@ -36,3 +38,4 @@ version = {file = "VERSION"}
 tangods_moenchzmq = ["VERSION"]
 "tangods_moenchzmq.default_images" = ["*.npy"]
 "tangods_moenchzmq.reorder_tables" = ["*.npy"]
+"testserver_moenchzmq.util" = ["*.ttf"]
