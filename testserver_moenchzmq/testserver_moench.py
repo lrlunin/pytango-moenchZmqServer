@@ -61,6 +61,22 @@ class MoenchZmqTestServer(Device):
         label="frames", access=AttrWriteType.READ_WRITE, dtype=int
     )
 
+    framerate = attribute(
+        label="framerate",
+        access=AttrWriteType.READ_WRITE,
+        dtype=float,
+        unit="Hz",
+        min_value=0.5,
+    )
+
+    single_photon_signal = attribute(
+        label="single signal",
+        access=AttrWriteType.READ_WRITE,
+        dtype=float,
+        unit="ADU",
+        min_value=0,
+    )
+
     def read_gaussian_noise_sigma(self):
         return self._gaussian_noise_sigma
 
@@ -91,6 +107,18 @@ class MoenchZmqTestServer(Device):
     def write_frames_amount(self, value):
         self._frames_amount = value
 
+    def read_framerate(self):
+        return self._framerate
+
+    def write_framerate(self, value):
+        self._framerate = value
+
+    def read_single_photon_signal(self):
+        return self._single_photon_signal
+
+    def write_single_photon_signal(self, value):
+        self._single_photon_signal = value
+
     def init_device(self):
         Device.init_device(self)
         self.set_state(DevState.INIT)
@@ -98,7 +126,8 @@ class MoenchZmqTestServer(Device):
         self._background_offset = 5400
         self._image_class = ImageClass.PEDESTAL
         self._frames_amount = 100
-
+        self._framerate = 100
+        self._single_photon_signal = 100
         self.init_zmq()
 
         self.set_state(DevState.ON)
@@ -107,23 +136,38 @@ class MoenchZmqTestServer(Device):
         context = zmq.Context()
         self.socket = context.socket(zmq.PUB)
         self.socket.bind(f"tcp://{self.ZMQ_TX_IP}:{self.ZMQ_TX_PORT}")
+        self.send_loop = asyncio.new_event_loop()
 
     @command
-    def send_frame(self):
-        match self._image_class:
-            case ImageClass.PEDESTAL:
-                frame = PedestalFrame(
-                    self._background_offset, self._gaussian_noise_sigma
-                )
-            case ImageClass.DIGITS:
-                frame = DigitFrame(
-                    self._background_offset, self._gaussian_noise_sigma, 30
-                )
-            case ImageClass.SIMULATION:
-                frame = SimulationFrame(
-                    self._background_offset, self._gaussian_noise_sigma, 100
-                )
+    def send_frames(self):
+        self.send_loop.run_in_executor(None, self._send_frames)
+
+    def _send_frames(self):
+        self.set_state(DevState.RUNNING)
+        for i in range(self._frames_amount):
+            match self._image_class:
+                case ImageClass.PEDESTAL:
+                    frame = PedestalFrame(
+                        self._background_offset, self._gaussian_noise_sigma
+                    )
+                case ImageClass.DIGITS:
+                    frame = DigitFrame(
+                        self._background_offset, self._gaussian_noise_sigma, i
+                    )
+                case ImageClass.SIMULATION:
+                    frame = SimulationFrame(
+                        self._background_offset,
+                        self._gaussian_noise_sigma,
+                        self._single_photon_signal,
+                    )
+            self.send_frame(frame, i)
+            time.sleep(1 / self._framerate)
+        self.set_state(DevState.ON)
+
+    def send_frame(self, frame: Frame, frame_number: int):
         reordered = FrameUtils.inverse_reorder(frame.get_frame())
+        if frame_number is not None:
+            payload_header["frameIndex"] = frame_number
         self.socket.send_json(payload_header)
         self.socket.send(reordered.tobytes())
         self.socket.send_json(dummy_header)
