@@ -1,7 +1,7 @@
 from tangods_moenchzmq.util_funcs.parsers import *
 from tangods_moenchzmq.util_funcs.buffers import *
 from tangods_moenchzmq.proc_funcs.processing import processing_function
-from dataformat_moenchzmq.datatype import DataHeader, save_header
+from dataformat_moenchzmq.datatype import DataHeaderv1, save_header
 
 import asyncio
 import json
@@ -87,7 +87,6 @@ class MoenchZmqServer(Device):
     _raw_file_fullpath = ""
     _counting_sigma = 5.0
     # reorder table for frame
-    reorder_table = None
 
     _filename = ""
     _filepath = ""
@@ -598,7 +597,7 @@ class MoenchZmqServer(Device):
             packet2 = await self._socket.recv()
             raw_buffer = np.frombuffer(packet2, dtype=np.uint16)
             try:
-                payload = raw_buffer[self.reorder_table]
+                payload = raw_buffer[self._reorder_table]
             except:
                 frameIndex = header.get("frameIndex")
                 print(f"Reorder of frame {frameIndex} failed. Ignored...")
@@ -685,7 +684,7 @@ class MoenchZmqServer(Device):
                 "process_threshold_img": self.read_process_threshold_img(),
                 "process_counting_img": self.read_process_counting_img(),
             }
-            data_header = DataHeader(**data_dict)
+            data_header = DataHeaderv1(**data_dict)
             save_header(self._raw_file_fullpath, data_header)
         self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
@@ -713,7 +712,7 @@ class MoenchZmqServer(Device):
         self.set_state(DevState.INIT)
         self.initialize_dynamic_attributes()
         self.get_device_properties(self.get_device_class())
-        self.reorder_table = np.load(
+        self._reorder_table = np.load(
             files("tangods_moenchzmq.reorder_tables").joinpath("moench03.npy")
         )
         # sync manager for synchronization between threads

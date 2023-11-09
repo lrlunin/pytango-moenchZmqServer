@@ -11,7 +11,8 @@ from enum import IntEnum
 from nexusformat.nexus import *
 from os import path
 from functools import reduce
-from dataformat_moenchzmq.datatype import save_frame, FRAMETYPE_HEADER_SIZE
+import ctypes
+from dataformat_moenchzmq.datatype import *
 
 
 class FrameType(IntEnum):
@@ -48,6 +49,9 @@ def processing_function(
     raw_file_fullpath,
     shared_memory_pedestal_counter,
     shared_memory_pedestal_squared,
+    shared_memory_individual_frames,
+    header_size=ctypes.sizeof(DataHeaderv1),
+    data_structure_class=DataStructurev1,
 ):
     # use_modes = [self.read_process_pedestal_img(),  self.read_process_analog_img(), self.read_process_threshold_img(), self.read_process_counting_img()]
     # [
@@ -180,14 +184,21 @@ def processing_function(
             clustered = photon_max_pixels.astype(np.int16)
 
     if save_separate_frames:
-        databytes = int(frametype).to_bytes(FRAMETYPE_HEADER_SIZE, "big")
+        data_dict = {
+            "frame_index": frame_index,
+            "frame_type": frametype,
+        }
         if frametype == FrameType.PEDESTAL:
-            databytes += payload_copy.tobytes
+            data = data_structure_class(pedestal=payload_copy.tobytes(), **data_dict)
         else:
             # if too slow - save with different offsets instead of joining
-            array_to_bytes = map(lambda x: x.tobytes(), [analog, threshold, clustered])
-            databytes += reduce((lambda x, y: x + y), array_to_bytes)
-        save_frame(raw_file_fullpath, frame_index, databytes)
+            data = data_structure_class(
+                analog=analog.tobytes(),
+                threshold=threshold.tobytes(),
+                clustered=clustered.tobytes(),
+                **data_dict,
+            )
+            set_frame(shared_memory_individual_frames, header_size, data)
 
     lock.acquire()
     match frametype:
