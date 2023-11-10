@@ -10,21 +10,60 @@ class Converter:
     def __init__(self, input_file_path: str) -> None:
         self._input_file_path = input_file_path
         self._fd = os.open(self._input_file_path, os.O_RDONLY)
-        self.parse_header()
+        self.parse_versions()
+
+    def parse_versions(self):
+        self._header_type = self.get_header_type()
+        self._header_size = self.get_header_size()
+
+        self._data_type = self.get_data_type()
+        self._data_size = self._data_type().data_size
+
+    def get_header_type(self) -> type:
+        header_version = int.from_bytes(
+            os.pread(self._fd, ct.sizeof(ct.c_uint64), 0),
+            byteorder="little",
+            signed=False,
+        )
+        header_type = dt.header_version.get(header_version)
+        if header_type is None:
+            raise Exception(f"Not supported header version {header_version}!")
+        else:
+            print(f"Parsed header {header_type.__name__}")
+            return header_type
+
+    def get_header_size(self) -> int:
+        header_size = int.from_bytes(
+            os.pread(self._fd, ct.sizeof(ct.c_uint64), ct.sizeof(ct.c_uint64)),
+            byteorder="little",
+            signed=False,
+        )
+        return header_size
+
+    def get_data_type(self) -> type:
+        data_version = int.from_bytes(
+            os.pread(self._fd, ct.sizeof(ct.c_uint64), 2 * ct.sizeof(ct.c_uint64)),
+            byteorder="little",
+            signed=False,
+        )
+        data_type = dt.data_version.get(data_version)
+        if data_type is None:
+            raise Exception(f"Not supported data version {data_version}!")
+        else:
+            print(f"Parsed header {data_type.__name__}")
+            return data_type
 
     def __del__(self) -> None:
         os.close(self._fd)
 
-    def parse_header(self) -> None:
-        bytes = os.pread(self._fd, dt.HEADER_SIZE, 0)
-        self._dh = dt.DataHeader(bytes)
+    def get_header(self) -> dt.DataHeaderv1:
+        header_bytes = os.pread(self._fd, self._header_size, 0)
+        return self._header_type(header_bytes)
 
-    def get_header_as_dict(self) -> dict:
-        format_str = lambda x, y: x if y != ct.c_char_p else x.encode("utf-8")
-        return dict(
-            (field, format_str(getattr(self._dh, field), dtype))
-            for field, dtype in self._dh._fields_
-        )
+    def get_data(self, frame_index: int) -> dt.DataStructurev1:
+        offset = self._header_size + frame_index * self._data_size
+        data_bytes = os.pread(self._fd, self._data_size, offset)
+        return self._data_type(data_bytes)
 
     def convert_to_nexus(self, nexus_filename) -> None:
         processed_frames = self._dh.processed_frames
