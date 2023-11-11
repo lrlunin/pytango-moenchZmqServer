@@ -1,7 +1,6 @@
 from tangods_moenchzmq.util_funcs.parsers import *
 from tangods_moenchzmq.util_funcs.buffers import *
 from tangods_moenchzmq.proc_funcs.processing import processing_function
-from dataformat_moenchzmq.datatype import DataHeader, save_header
 
 from .util.enums import ImageClass
 from .util.frames import *

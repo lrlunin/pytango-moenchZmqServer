@@ -49,7 +49,7 @@ def processing_function(
     raw_file_fullpath,
     shared_memory_pedestal_counter,
     shared_memory_pedestal_squared,
-    shared_memory_individual_frames,
+    shared_memory_individual_frames=None,
     header_size=ctypes.sizeof(DataHeaderv1),
     data_structure_class=DataStructurev1,
 ):

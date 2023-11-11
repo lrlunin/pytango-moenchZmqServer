@@ -1,7 +1,7 @@
 from tangods_moenchzmq.util_funcs.parsers import *
 from tangods_moenchzmq.util_funcs.buffers import *
 from tangods_moenchzmq.proc_funcs.processing import processing_function
-from dataformat_moenchzmq.datatype import DataHeaderv1, save_header
+from dataformat_moenchzmq.datatype import DataHeaderv1, dump_memory
 
 import asyncio
 import json
@@ -35,17 +35,9 @@ from slsdet import Moench, runStatus, timingMode, detectorSettings, frameDiscard
 class MoenchZmqServer(Device):
     """Custom implementation of zmq processing server for X-ray detector MOENCH made in PSI which is integrated with a Tango device server."""
 
-    processing_pattern_string = '["up"]'
-    processing_indexes_array = [0]
-    processing_indexes_divisor = 1
-    _save_separate_frames = False
     if sys.argv[0] is "MoenchZmqServer":
         moench_device = Moench()
 
-    _manager = None
-    _context = None
-    _socket = None
-    _process_pool = None
     _IMG_ATTR = [
         "pedestal",
         "analog_img",
@@ -60,41 +52,6 @@ class MoenchZmqServer(Device):
 
     # probably should be rearranged in array, because there will pumped and unpumped images, for each type of processing
     # and further loaded with dynamic attributes
-    shared_memory_pedestal_counter = None
-
-    shared_memory_analog_img = None
-    shared_memory_analog_img_pumped = None
-
-    shared_memory_threshold_img = None
-    shared_memory_threshold_img_pumped = None
-
-    shared_memory_counting_img = None
-    shared_memory_counting_img_pumped = None
-
-    shared_memory_raw_img = None
-    # shared scalar values
-    shared_processed_frames = None
-    shared_received_frames = None
-    shared_unpumped_frames = None
-    shared_pumped_frames = None
-    shared_receive_frames = None
-    shared_pedestal_frames = None
-    _split_pump = False
-    _process_pedestal_img = False
-    _process_analog_img = True
-    _process_threshold_img = True
-    _process_counting_img = False
-    _raw_file_fullpath = ""
-    _counting_sigma = 5.0
-    # reorder table for frame
-
-    _filename = ""
-    _filepath = ""
-    _file_index = 0
-    _normalize = True
-    _update_period = 0
-    _abort_await = False
-
     ZMQ_RX_IP = device_property(
         dtype=str,
         doc="port of the slsReceiver instance, must match the config",
@@ -516,8 +473,7 @@ class MoenchZmqServer(Device):
         return self._process_counting_img
 
     def write_save_separate_frames(self, value):
-        # self._save_separate_frames = value
-        pass
+        self._save_separate_frames = False
 
     def read_save_separate_frames(self):
         return self._save_separate_frames
@@ -685,7 +641,7 @@ class MoenchZmqServer(Device):
                 "process_counting_img": self.read_process_counting_img(),
             }
             data_header = DataHeaderv1(**data_dict)
-            save_header(self._raw_file_fullpath, data_header)
+            # save_header(self._raw_file_fullpath, data_header)
         self.write_file_index(file_index + 1)
         self.set_state(DevState.ON)
 
@@ -820,6 +776,7 @@ class MoenchZmqServer(Device):
         # initialization of tango events for pictures buffers
         for attr in self._IMG_ATTR:
             self.set_change_event(attr, True, False)
+        self._init_attributes()
         self.set_state(DevState.ON)
 
     # updating of tango events for pictures buffers
@@ -876,6 +833,21 @@ class MoenchZmqServer(Device):
         self._socket.setsockopt(zmq.SUBSCRIBE, b"")
         hwm = self._socket.get_hwm()
         print(f"HWM of the socket = {hwm}")
+
+    def _init_attributes(self):
+        self._abort_await = False
+        self.write_normalize(False)
+        self.write_threshold(80)
+        self.write_counting_sigma(4.0)
+        self.write_processing_pattern('["up"]')
+        self.write_update_period(0)
+        self.write_split_pump(False)
+        self.write_process_pedestal_img(False)
+        self.write_process_analog_img(False)
+        self.write_process_threshold_img(False)
+        self.write_process_counting_img(False)
+        self.write_save_separate_frames(False)
+        self._raw_file_fullpath = ""
 
     def _reset_pedestal(self):
         empty_array = np.zeros((400, 400), dtype=float)
