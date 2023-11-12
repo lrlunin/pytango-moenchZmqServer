@@ -40,29 +40,31 @@ def fast_update_ped_buffer(
     frame, pedestal_mask, pedestal, pedestal_squared, pedestal_counter
 ):
     BUFFER_SIZE = 5000
-    for y, x in np.argwhere(pedestal_mask):
-        if pedestal_counter[y, x] < BUFFER_SIZE:
-            pedestal_counter[y, x] += 1
-            if pedestal_counter[y, x] == 1:
-                pedestal[y, x] = frame[y, x]
-                pedestal_squared[y, x] = frame[y, x] ** 2
-            else:
-                pedestal[y, x] += frame[y, x]
-                pedestal_squared[y, x] += frame[y, x] ** 2
-        else:
-            if pedestal_counter[y, x] == 0:
-                pedestal[y, x] = frame[y, x]
-                pedestal_squared[y, x] = frame[y, x] ** 2
-                pedestal_counter[y, x] += 1
-            else:
-                pedestal[y, x] = (
-                    pedestal[y, x] + frame[y, x] - pedestal[y, x] / BUFFER_SIZE
-                )
-                pedestal_squared[y, x] = (
-                    pedestal_squared[y, x]
-                    + frame[y, x] ** 2
-                    - pedestal_squared[y, x] / BUFFER_SIZE
-                )
+    for y in range(0, frame.shape[0]):
+        for x in range(0, frame.shape[1]):
+            if pedestal_mask[y, x] == 1:
+                if pedestal_counter[y, x] < BUFFER_SIZE:
+                    pedestal_counter[y, x] += 1
+                    if pedestal_counter[y, x] == 1:
+                        pedestal[y, x] = frame[y, x]
+                        pedestal_squared[y, x] = frame[y, x] ** 2
+                    else:
+                        pedestal[y, x] += frame[y, x]
+                        pedestal_squared[y, x] += frame[y, x] ** 2
+                else:
+                    if pedestal_counter[y, x] == 0:
+                        pedestal[y, x] = frame[y, x]
+                        pedestal_squared[y, x] = frame[y, x] ** 2
+                        pedestal_counter[y, x] += 1
+                    else:
+                        pedestal[y, x] = (
+                            pedestal[y, x] + frame[y, x] - pedestal[y, x] / BUFFER_SIZE
+                        )
+                        pedestal_squared[y, x] = (
+                            pedestal_squared[y, x]
+                            + frame[y, x] ** 2
+                            - pedestal_squared[y, x] / BUFFER_SIZE
+                        )
 
 
 @njit("f8[:,:](f8[:,:], f8[:,:])")
