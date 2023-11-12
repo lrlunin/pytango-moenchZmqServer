@@ -14,6 +14,8 @@ from functools import reduce
 import ctypes
 from dataformat_moenchzmq.datatype import *
 
+# from viztracer import trace_and_save
+
 
 class FrameType(IntEnum):
     PEDESTAL = 0
@@ -124,9 +126,6 @@ def processing_function(
     )
     # calculations oustide of lock
     # variables assignments inside of lock
-
-    print(f"Enter processing frame {frame_index}")
-
     # we need to classify the frame (is it new pedestal/pumped/unpumped) before the processing
     # later configurable with str array like sequence: [unpumped, ped, ped, ped, pumped, ped, ped, ped,]
     frametype = None
@@ -144,17 +143,10 @@ def processing_function(
     if process_pedestal:
         frametype = FrameType.PEDESTAL
     rlock()
-    print("enter pedestal rlock")
-    pedestal_counter_copy = np.copy(pedestal_counter)
-    pedestal_squared_copy = np.copy(pedestal_squared)
-    pedestal_copy = np.copy(pedestal)
-    print("quit pedestal rlock")
+    divided_ped = get_ped(pedestal_counter, pedestal)
+    pedestal_std = get_ped_std(pedestal_counter, pedestal, pedestal_squared)
     rrelease()
 
-    divided_ped = get_ped(pedestal_counter_copy, pedestal_copy)
-    pedestal_std = get_ped_std(
-        pedestal_counter_copy, pedestal_copy, pedestal_squared_copy
-    )
     analog = payload_copy - divided_ped
 
     pixel_classes = classifyPixel(analog, pedestal_std, counting_sigma)
@@ -223,7 +215,5 @@ def processing_function(
         ready_event.clear()
         push_event.set()
         ready_event.wait()
-    raw += payload
-    print(f"Left processing frame {frame_index}")
-    print(f"Processed frames {processed_frames.value}")
+    # print(f"Left processing frame {frame_index}")
     lock.release()
