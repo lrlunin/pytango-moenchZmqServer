@@ -13,8 +13,9 @@ from os import path
 from functools import reduce
 import ctypes
 from dataformat_moenchzmq.datatype import *
+from tangods_moenchzmq.util_funcs.fast_sm_int import *
 
-# from viztracer import trace_and_save
+from viztracer import trace_and_save
 
 
 class FrameType(IntEnum):
@@ -23,6 +24,7 @@ class FrameType(IntEnum):
     UNPUMPED = 2
 
 
+# @trace_and_save(output_dir="fast_int")
 def processing_function(
     processing_indexes_divisor,
     processing_indexes_array,
@@ -77,16 +79,16 @@ def processing_function(
     def rlock():
         serviceQueue.acquire()
         rmutex.acquire()
-        readcount.value += 1
-        if readcount.value == 1:
+        write_int(readcount, get_int(readcount) + 1)
+        if get_int(readcount) == 1:
             resource.acquire()
         serviceQueue.release()
         rmutex.release()
 
     def rrelease():
         rmutex.acquire()
-        readcount.value -= 1
-        if readcount.value == 0:
+        write_int(readcount, get_int(readcount) - 1)
+        if get_int(readcount) == 0:
             resource.release()
         rmutex.release()
 
@@ -201,7 +203,7 @@ def processing_function(
                 threshold_img += thresholded
             if process_counting:
                 counting_img += clustered
-            unpumped_frames.value += 1
+            write_int(unpumped_frames, get_int(unpumped_frames) + 1)
         case FrameType.PUMPED:
             if process_analog:
                 analog_img_pumped += analog
@@ -209,8 +211,9 @@ def processing_function(
                 threshold_img_pumped += thresholded
             if process_counting:
                 counting_img_pumped += clustered
-            pumped_frames.value += 1
-    processed_frames.value += 1
+            write_int(pumped_frames, get_int(pumped_frames) + 1)
+    write_int(processed_frames, get_int(processed_frames) + 1)
+    # processed_frames.value += 1
     if update_period != 0 and processed_frames.value % update_period == 0:
         ready_event.clear()
         push_event.set()

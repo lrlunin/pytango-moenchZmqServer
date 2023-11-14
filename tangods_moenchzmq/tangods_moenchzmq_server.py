@@ -2,6 +2,7 @@ from tangods_moenchzmq.util_funcs.parsers import *
 from tangods_moenchzmq.util_funcs.buffers import *
 from tangods_moenchzmq.proc_funcs.processing import processing_function
 from dataformat_moenchzmq.datatype import DataHeaderv1, dump_memory
+from tangods_moenchzmq.util_funcs.fast_sm_int import *
 
 import asyncio
 import json
@@ -398,10 +399,12 @@ class MoenchZmqServer(Device):
         return self._update_period
 
     def write_processed_frames(self, value):
-        self.shared_processed_frames.value = value
+        write_int(self.shared_processed_frames, value)
+        # self.shared_processed_frames.value = value
 
     def read_processed_frames(self):
-        return self.shared_processed_frames.value
+        return get_int(self.shared_processed_frames)
+        # return self.shared_processed_frames.value
 
     def write_received_frames(self, value):
         self.shared_received_frames.value = value
@@ -410,16 +413,16 @@ class MoenchZmqServer(Device):
         return self.shared_received_frames.value
 
     def write_unpumped_frames(self, value):
-        self.shared_unpumped_frames.value = value
+        write_int(self.shared_unpumped_frames, value)
 
     def read_unpumped_frames(self):
-        return self.shared_unpumped_frames.value
+        return get_int(self.shared_unpumped_frames)
 
     def write_pumped_frames(self, value):
-        self.shared_pumped_frames.value = value
+        write_int(self.shared_pumped_frames, value)
 
     def read_pumped_frames(self):
-        return self.shared_pumped_frames.value
+        return get_int(self.shared_pumped_frames)
 
     def write_receive_frames(self, value):
         self.shared_receive_frames.value = value
@@ -585,7 +588,7 @@ class MoenchZmqServer(Device):
     def block_stop_receiver(self, received_frames_at_the_time):
         self.write_receive_frames(False)
         while (
-            self.shared_processed_frames.value < received_frames_at_the_time
+            self.read_processed_frames() < received_frames_at_the_time
             and not self._abort_await
         ):
             print(f"abort wait: {self._abort_await}")
@@ -702,10 +705,10 @@ class MoenchZmqServer(Device):
         # using shared thread-safe Value instance from multiprocessing
         self.shared_receive_frames = self._manager.Value("b", 0)
         self.shared_pedestal_frames = self._manager.Value("I", 0)
-        self.shared_processed_frames = self._manager.Value("I", 0)
+        self.shared_processed_frames = self._shared_memory_manager.SharedMemory(8)
         self.shared_received_frames = self._manager.Value("I", 0)
-        self.shared_unpumped_frames = self._manager.Value("I", 0)
-        self.shared_pumped_frames = self._manager.Value("I", 0)
+        self.shared_unpumped_frames = self._shared_memory_manager.SharedMemory(8)
+        self.shared_pumped_frames = self._shared_memory_manager.SharedMemory(8)
         self.shared_amount_frames = self._manager.Value("I", 0)
         self.shared_split_pump = self._manager.Value("b", 0)
 
@@ -714,7 +717,7 @@ class MoenchZmqServer(Device):
         self.resource, self.rmutex, self.serviceQueue = [
             self._manager.Semaphore() for _ in range(0, 3)
         ]
-        self.readcount = self._manager.Value("i", 0)
+        self.readcount = self._shared_memory_manager.SharedMemory(8)
 
         # calculating how many bytes need to be allocated and shared for a 400x400 float numpy array
         img_bytes = np.zeros((400, 400), dtype=float).nbytes
