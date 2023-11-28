@@ -53,6 +53,7 @@ def processing_function(
     raw_file_fullpath,
     shared_memory_pedestal_counter,
     shared_memory_pedestal_squared,
+    update_pedestal_img,
     shared_memory_individual_frames=None,
     header_size=ctypes.sizeof(DataHeaderv1),
     data_structure_class=DataStructurev1,
@@ -157,15 +158,16 @@ def processing_function(
     photon_max_pixels = pixel_classes == 2
     if frametype is FrameType.PEDESTAL:
         pedestal_pixels = np.ones((400, 400), dtype=np.int8)
-    wlock()
-    fast_update_ped_buffer(
-        payload_copy,
-        pedestal_pixels.astype(np.uint8),
-        pedestal,
-        pedestal_squared,
-        pedestal_counter,
-    )
-    wrelease()
+    if update_pedestal_img:
+        wlock()
+        fast_update_ped_buffer(
+            payload_copy,
+            pedestal_pixels.astype(np.uint8),
+            pedestal,
+            pedestal_squared,
+            pedestal_counter,
+        )
+        wrelease()
     if frametype is not FrameType.PEDESTAL:
         if process_analog:
             print("Processing analog...")

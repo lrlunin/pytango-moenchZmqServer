@@ -228,6 +228,15 @@ class MoenchZmqServer(Device):
         doc="use this acquisition series as pedestal",
     )
 
+    update_pedestal_img = attribute(
+        display_level=DispLevel.EXPERT,
+        label="update pedestal",
+        dtype=bool,
+        access=AttrWriteType.READ_WRITE,
+        memorized=True,
+        hw_memorized=True,
+    )
+
     process_analog_img = attribute(
         label="process analog",
         dtype=bool,
@@ -466,6 +475,12 @@ class MoenchZmqServer(Device):
     def read_process_pedestal_img(self):
         return self._process_pedestal_img
 
+    def write_update_pedestal_img(self, value):
+        self._update_pedestal_img = value
+
+    def read_update_pedestal_img(self):
+        return self._update_pedestal_img
+
     def write_process_analog_img(self, value):
         self._process_analog_img = value
 
@@ -545,6 +560,7 @@ class MoenchZmqServer(Device):
                     self._raw_file_fullpath,
                     self.shared_memory_pedestal_counter,
                     self.shared_memory_pedestal_sqaured,
+                    self._update_pedestal_img,
                 )
 
     async def get_msg_pair(self):
@@ -851,6 +867,7 @@ class MoenchZmqServer(Device):
         self.write_update_period(0)
         self.write_split_pump(False)
         self.write_process_pedestal_img(False)
+        self.write_update_pedestal_img(True)
         self.write_process_analog_img(False)
         self.write_process_threshold_img(False)
         self.write_process_counting_img(False)
