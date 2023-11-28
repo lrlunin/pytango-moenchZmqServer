@@ -359,12 +359,21 @@ class MoenchZmqServer(Device):
         attr_name = attribute.get_name()
         return self.read_image_by_name(attr_name)
 
-    def read_image_by_name(self, image_attr_name):
+    def read_image_by_name(self, image_attr_name, flip=None):
+        if flip is None:
+            flip = self.FLIP_IMAGE
         try:
             index = self._IMG_ATTR.index(image_attr_name)
             return read_shared_array(
-                shared_memory=self.shared_memory_buffers[index], flip=self.FLIP_IMAGE
+                shared_memory=self.shared_memory_buffers[index], flip=flip
             )
+        except ValueError as e:
+            self.error_stream(f"Cannot find {image_attr_name} in list")
+
+    def write_image_by_name(self, image_attr_name, value, flip=False):
+        try:
+            index = self._IMG_ATTR.index(image_attr_name)
+            write_shared_array(self.shared_memory_buffers[index], value)
         except ValueError as e:
             self.error_stream(f"Cannot find {image_attr_name} in list")
 
@@ -596,31 +605,8 @@ class MoenchZmqServer(Device):
         # averaging pedetal which we have accumulated
         self._abort_await = False
         # normalization for all other images
-        unpumped_frames = self.read_unpumped_frames()
-        pumped_frames = self.read_pumped_frames()
         if self.read_normalize():
-            if unpumped_frames != 0:
-                pass
-                # self.write_analog_img(
-                #     self.read_analog_img(flip=False) / unpumped_frames
-                # )
-                # self.write_threshold_img(
-                #     self.read_threshold_img(flip=False) / unpumped_frames
-                # )
-                # self.write_counting_img(
-                #     self.read_counting_img(flip=False) / unpumped_frames
-                # )
-            if pumped_frames != 0:
-                pass
-                # self.write_analog_img_pumped(
-                #     self.read_analog_img_pumped(flip=False) / pumped_frames
-                # )
-                # self.write_threshold_img_pumped(
-                #     self.read_threshold_img_pumped(flip=False) / pumped_frames
-                # )
-                # self.write_counting_img_pumped(
-                #     self.read_counting_img_pumped(flip=False) / pumped_frames
-                # )
+            self.normalize_frames()
         # HERE ALL POST HOOKS
         self.update_images_events()
         self.save_nexus_file()
@@ -826,6 +812,25 @@ class MoenchZmqServer(Device):
             time_str = datetime_now.strftime("%H:%M:%S")
             savepath += f"_{time_str}"
         entry.save(f"{savepath}.nxs")
+
+    def normalize_frames(self):
+        unpumped_frames = self.read_unpumped_frames()
+        pumped_frames = self.read_pumped_frames()
+        if unpumped_frames != 0:
+            for attr_name in ["analog_img", "threshold_img", "counting_img"]:
+                self.write_image_by_name(
+                    attr_name,
+                    self.read_image_by_name(attr_name, False) / unpumped_frames,
+                )
+        if pumped_frames != 0:
+            for attr_name in [
+                "analog_img_pumped",
+                "threshold_img_pumped",
+                "counting_img_pumped",
+            ]:
+                self.write_image_by_name(
+                    attr_name, self.read_image_by_name(attr_name, False) / pumped_frames
+                )
 
     def _init_zmq_socket(self, zmq_ip: str, zmq_port: str):
         endpoint = f"tcp://{zmq_ip}:{zmq_port}"
