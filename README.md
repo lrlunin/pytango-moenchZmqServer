@@ -7,6 +7,35 @@
 
 This device receives ZMQ packets from MOENCH detector and process them.
 
+## Working scheme
+
+```mermaid
+graph RL
+    new.detector("MOENCH Detector")<--1Gb--->new.hardware_config("hardware configuration")
+    linkStyle 0 stroke-width:2px,fill:none,stroke:blue;
+    new.detector<--10Gb--->new.raw_data("saving raw data as .raw\nforwarding to ZMQ socket")
+    linkStyle 1 stroke-width:2px,fill:none,stroke:orange;
+    new.raw_data<--"ZMQ socket"-->new.moenchZMQDS
+    subgraph psisoft ["PSI Software"]
+        subgraph slsReceiver["SLS Receiver"]
+            new.hardware_config
+            new.raw_data
+        end
+    end
+    subgraph new.moenchZMQDS["MoenchZMQ TangoDS"]
+        new.data_processing("data processing")
+    end
+    new.hardware_config<--"Python API"-->new.moenchControlDS
+    subgraph new.moenchControlDS["MoenchControl TangoDS"]
+        direction LR
+        new.hw_control("hardware configuration\nsetting control")
+        new.acq("start/stop acquisition")
+    end
+    new.moenchControlDS--"Tango proxy"-->new.moenchZMQDS
+    new.moenchControlDS<--->new.jive
+    new.moenchZMQDS<--->new.jive("Sardana/Jive")
+```
+
 ## Installation
 This package is distributed via conda. There are necessary steps before installation:
 1. `conda create -n tangods_env python=3.10`
